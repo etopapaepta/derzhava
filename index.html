@@ -18034,9 +18034,9 @@ boot();
     if (G.started) return;   // партия началась — камера снова игрока
     const onHome = !start.hidden && start.classList.contains('harbor-home');
     if (onHome) {
-      if (!placed) { const r = pickSpot(); if (r) { CAM.x = r.x; CAM.z = r.z; } placed = true; t0 = ts; }
+      if (!placed && (window.DerzhavaMenuCity || ts > 6000)) { const r = pickSpot(); if (r) { const c = (window.DerzhavaMenuCity && DerzhavaMenuCity.build(r)) || r; CAM.x = c.x; CAM.z = c.z; } placed = true; t0 = ts; }
       const dt = Math.min(0.25, (ts - (last || ts)) / 1000);
-      CAM.yaw += dt * 0.035; CAM.dist = 165 + 40 * Math.sin((ts - t0) / 1000 * 0.06); CAM.tilt = -0.06;   // медленный облёт, приближение «дышит»
+      CAM.yaw += dt * 0.035; CAM.dist = 150 + 35 * Math.sin((ts - t0) / 1000 * 0.06); CAM.tilt = -0.06;   // медленный облёт, приближение «дышит»
     }
     last = ts; requestAnimationFrame(fly);
   }
@@ -18292,6 +18292,677 @@ boot();
   });
   out.addEventListener('click', () => { unlocked = false; try { sessionStorage.removeItem(KEY); } catch {} render(); $('dev-login').focus(); });
   render();
+})();
+</script>
+<script id="models-js">
+// ===== 17_models.js =====
+// ---------- Новые модели техники и «Москва-Сити».
+// РСЗО (6×6, пакет из 40 труб), ударный дрон «Искра» (дельта-крыло, толкающий винт), военный самолёт
+// (двухкилевой истребитель с ракетами и форсажем), ударный вертолёт (тандемная кабина, пилоны), шасси грузовиков
+// для ПВО и тяжёлой артиллерии, четырёхлопастный винт. Плюс здание «Москва-Сити» в разделе «Город» (с 1995 года).
+// Модели собираются тем же конструктором Geo; m=1 — цвет державы, m=2 — светится ночью, m=3 — огонь. ----------
+(function () {
+  if (typeof Geo !== 'function' || typeof MODELS === 'undefined') return;
+  const H = Math.PI / 2;
+  const camo = C(0x5d6b52), camo2 = C(0x4a5843), camoLt = C(0x75836a), dark = C(0x2b3236), tire = C(0x22282b);
+  const hub = C(0x7c8a8f), glass = C(0x7fa9b8), glassDk = C(0x3f5e6c), lamp = C(0xffe2a0), red = C(0xb8453a), white = C(0xe8e6de);
+  const jetSkin = C(0x7d909c), jetTop = C(0x5f7280), jetBelly = C(0xa9b8c0), nozzle = C(0x3a3f43), flame = C(0xffa64a);
+
+  // ---------- колесо: шина, диск, болты ----------
+  function wheel(g, x, y, z, r, w, side) {
+    g.cyl(x, y, z, r, r, w, tire, { seg: 14, rz: -side * H, sm: 1 });
+    g.cyl(x + side * w, y, z, r * .55, r * .5, .05, hub, { seg: 10, rz: -side * H });
+    g.cyl(x + side * (w + .05), y, z, r * .18, r * .12, .06, dark, { seg: 6, rz: -side * H });
+  }
+
+  // ---------- шасси 6×6 (или гусеницы): кабина, капот, бампер, фары, баки, крылья ----------
+  function truck(g, coat, tracked) {
+    const coatDk = mixC(coat, dark, .35);
+    g.box(0, .55, -.2, 1.9, .26, 5.3, dark);                                   // рама
+    if (tracked) {
+      for (const s of [-1, 1]) {
+        g.box(s * 1.12, .14, -.2, .5, .62, 5.4, tire);
+        for (let i = 0; i < 6; i++) g.cyl(s * 1.12, .45, -2.35 + i * .86, .3, .3, .5, hub, { seg: 10, rz: H });
+        g.box(s * 1.12, .78, -.2, .62, .08, 5.5, coatDk);
+      }
+    } else {
+      for (const s of [-1, 1]) {
+        for (const z of [1.75, -.85, -2.1]) wheel(g, s * 1.02, .55, z, .55, .36, s);
+        g.box(s * 1.08, 1.1, 1.75, .5, .1, 1.3, coatDk);                        // крылья над колёсами
+        g.box(s * 1.08, 1.1, -1.48, .5, .1, 2.6, coatDk);
+        g.cyl(s * .98, .92, .45, .22, .22, 1.1, coatDk, { seg: 10, rx: H, sm: 1 }); // топливный бак
+      }
+    }
+    // кабина с наклонным стеклом
+    g.box(0, .78, 1.9, 2.26, 1.12, 1.25, coat);
+    g.box(0, 1.9, 1.78, 2.2, .72, 1.02, coat);
+    g.box(0, 1.92, 2.3, 1.94, .64, .07, glass, { rx: -.28 }, 2);
+    for (const s of [-1, 1]) {
+      g.box(s * 1.105, 1.98, 1.72, .05, .5, .78, glass, null, 2);
+      g.box(s * 1.28, 1.9, 2.18, .08, .34, .06, dark); g.box(s * 1.2, 2.04, 2.18, .22, .04, .04, dark);   // зеркало
+      g.box(s * .78, .92, 2.55, .32, .2, .06, lamp, null, 2);                   // фары светятся ночью
+    }
+    g.box(0, 2.62, 1.78, 2.24, .1, 1.06, coatDk);
+    g.box(0, .62, 2.58, 2.36, .32, .2, dark);                                    // бампер
+    g.box(0, 1.15, 2.55, 1.2, .55, .05, coatDk);                                 // решётка
+    for (const s of [-1, 1]) g.box(s * 1.14, 1.2, -.4, .02, .14, 3.3, WH, null, 1);   // полоса цвета державы
+  }
+
+  // ---------- РСЗО: поворотная платформа и пакет 4×10 труб, поднятый на 22° ----------
+  function launcher(g) {
+    truck(g, camo, false);
+    g.box(0, .82, -1.0, 2.0, .28, 2.9, camo2);                                   // платформа кузова
+    g.cyl(0, 1.08, -1.15, .78, .78, .22, dark, { seg: 14 });                     // поворотный круг
+    const e = .38, ce = Math.cos(e), se = Math.sin(e), P = [0, 1.85, -1.25], L = 2.9;
+    const at = (u, v, w) => [P[0] + u, P[1] + v * ce + w * se, P[2] - v * se + w * ce];
+    // рама пакета
+    for (const s of [-1, 1]) { const p = at(s * 1.02, -.42, 0); g.box(p[0], p[1], p[2], .1, .92, L, camo2, { rx: -e }); }
+    { const p = at(0, -.48, 0); g.box(p[0], p[1], p[2], 2.1, .08, L, camo2, { rx: -e }); }
+    for (const w of [-L / 2 + .1, 0, L / 2 - .25]) { const p = at(0, .38, w); g.box(p[0], p[1], p[2], 2.12, .1, .14, camo, { rx: -e }); }   // стяжки поверх труб
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 10; c++) {
+      const p = at(-.9 + c * .2, -.32 + r * .2, -L / 2);
+      g.cyl(p[0], p[1], p[2], .085, .085, L, c % 2 ? dark : C(0x343c40), { rx: H - e, seg: 6 });
+    }
+    // гидроцилиндр подъёма и опоры
+    g.box(0, 1.15, -2.0, .26, .9, .26, steel, { rx: .55 });
+    for (const s of [-1, 1]) { g.cyl(s * .95, .1, -2.78, .1, .1, .75, steel, { seg: 6 }); g.box(s * .95, 0, -2.78, .36, .06, .36, dark); }
+  }
+
+  // ---------- ПВО: тот же грузовик, контейнеры ракет и радар ----------
+  function shield(g, phase) {
+    truck(g, camo, false);
+    g.box(0, .82, -1.0, 2.0, .3, 2.9, camo2);
+    for (const s of [-1, 1]) for (const k of [0, 1]) g.cyl(s * (.45 + k * .5), 1.25, -2.2, .2, .2, 2.4, camoLt, { rx: H - .5, seg: 10, sm: 1 });
+    g.cyl(0, 1.1, -.3, .22, .18, 1.1, steel, { seg: 8 });
+    if (phase !== null) g.grp(0, 2.25, -.3, phase || 0, () => { g.box(0, 0, 0, 2.0, .9, .12, C(0x6e8287)); for (let i = 0; i < 6; i++) g.box((i - 2.5) * .32, .05, .08, .05, .8, .06, steel); });
+  }
+
+  // ---------- четыре лопасти с жёлтыми концами ----------
+  function rotor(g, angle) {
+    g.grp(0, 0, 0, angle || 0, () => {
+      for (let i = 0; i < 4; i++) g.grp(0, 0, 0, i * H, () => {
+        g.box(1.28, 0, 0, 2.3, .05, .24, C(0x2c3336));
+        g.box(2.33, .005, 0, .22, .055, .25, safetyGold);
+      });
+      g.cyl(0, -.12, 0, .26, .2, .22, steel, { seg: 10 });
+      g.cyl(0, .08, 0, .14, .02, .2, dark, { seg: 8 });
+    });
+  }
+
+  // ---------- ударный вертолёт: тандемная кабина, пилоны, хвостовая балка ----------
+  function attackHeli(g, phase, civ) {
+    const skin = civ ? white : camo, skin2 = civ ? C(0xd3d0c2) : camo2, accent = civ ? C(0xc77840) : safetyGold;
+    g.sph(0, 1.2, .1, .66, skin, { ez: 2.5, sy: .95, seg: 16, sm: 1 });
+    g.sph(0, 1.02, 1.55, .4, skin2, { ez: 1.6, sy: .85, seg: 12, sm: 1 });                   // нос
+    g.sph(0, 1.62, 1.08, .36, glass, { ez: 1.55, sy: .78, seg: 12, sm: 1 });               // кабина 1
+    g.sph(0, 1.8, .38, .4, glass, { ez: 1.45, sy: .8, seg: 12, sm: 1 });                   // кабина 2
+    if (!civ) {
+      g.sph(0, .7, 1.75, .17, dark, { seg: 8 });                                            // турель
+      g.cyl(0, .66, 1.8, .045, .045, .8, dark, { rx: H, seg: 6 });                          // пушка
+    }
+    for (const s of [-1, 1]) {
+      g.cyl(s * .42, 1.88, -.95, .2, .2, 1.25, skin2, { rx: H, seg: 10, sm: 1 });          // двигатели
+      g.cyl(s * .42, 1.88, -1.0, .16, .18, .08, dark, { rx: H, seg: 10 });
+    }
+    g.cyl(0, 1.82, 0, .16, .13, .66, steel, { seg: 8 });                                   // вал винта до 2.46
+    g.cyl(0, 1.32, -.9, .3, .13, 2.75, skin, { rx: -H, seg: 10, sm: 1 });                  // хвостовая балка
+    g.box(0, 1.25, -3.55, .1, 1.15, .62, skin2, { rx: .3 });                               // киль
+    g.box(0, 1.85, -3.68, .11, .3, .5, WH, { rx: .3 }, 1);                                 // цвет державы на киле
+    g.box(0, 1.32, -3.1, 1.5, .07, .38, skin2);                                            // стабилизатор
+    g.cyl(.14, 1.95, -3.72, .48, .48, .03, C(0x9aa3a6), { rz: H, seg: 12 });               // хвостовой винт
+    g.box(.18, 1.95, -3.72, .03, .9, .08, dark);
+    for (const s of [-1, 1]) {
+      g.box(s * .1, 1.36, -1.6, .02, .13, 1.3, WH, null, 1);
+      if (civ) { g.box(s * .7, .14, .1, .1, .1, 2.2, steel); g.box(s * .6, .22, .1, .08, .7, .1, steel); continue; }
+      g.box(s * .95, 1.05, -.05, 1.2, .09, .6, skin2);                                     // крылышко
+      g.cyl(s * .82, .8, -.6, .2, .2, 1.05, dark, { rx: H, seg: 10, sm: 1 });              // блок НАР
+      g.cyl(s * .82, .8, .45, .2, .14, .1, C(0x1b1f21), { rx: H, seg: 10 });
+      for (const k of [-.12, .12]) g.cyl(s * 1.45 + k, .86, -.5, .07, .07, 1.0, white, { rx: H, seg: 6 });   // ПТУР
+      g.cyl(s * 1.45, .86, .5, .07, .02, .16, red, { rx: H, seg: 6 });
+      g.cyl(s * .55, .2, -.25, .17, .17, .14, tire, { rz: H, seg: 10 });                   // колёса шасси
+      g.box(s * .5, .25, -.25, .08, .62, .1, steel, { rz: s * .3 });
+    }
+    if (!civ) g.cyl(0, .17, 1.35, .13, .13, .1, tire, { rz: H, seg: 10 });
+    g.box(0, .95, .9, .02, .1, .02, accent);
+    if (phase !== null) g.grp(0, 2.46, 0, 0, () => rotor(g, phase));
+  }
+
+  // ---------- военный самолёт: двухкилевой истребитель ----------
+  function jet(g) {
+    g.sph(0, .92, .1, .56, jetSkin, { ez: 4.6, sy: .62, seg: 16, sm: 1 });                  // фюзеляж
+    g.cyl(0, .94, 2.3, .34, .02, 1.15, jetTop, { rx: H, seg: 12, sm: 1 });                  // нос
+    g.sph(0, 1.24, 1.5, .3, glassDk, { ez: 2.3, sy: .82, seg: 12, sm: 1 });                // фонарь
+    for (const s of [-1, 1]) {
+      g.cyl(s * .38, .78, -2.5, .3, .3, 3.2, jetSkin, { rx: H, seg: 12, sm: 1 });          // мотогондолы
+      g.cyl(s * .38, .78, -2.82, .25, .3, .34, nozzle, { rx: H, seg: 12 });                // сопла
+      g.cyl(s * .38, .78, -2.86, .19, .19, .05, flame, { rx: H, seg: 10 }, 3);             // форсаж светится
+      g.box(s * .44, .5, .55, .36, .4, .85, C(0x2d3439));                                   // воздухозаборники
+      const W = (pts, col, m) => { g.quad(...pts, col, m, [0, 5, 0]); g.quad(...pts.slice().reverse(), col, m, [0, -5, 0]); };
+      W([[s * .42, .93, 1.0], [s * 2.75, .86, -1.25], [s * 2.8, .86, -1.75], [s * .46, .9, -1.75]], jetTop);   // крыло
+      W([[s * .3, .98, 1.85], [s * .5, .95, 1.0], [s * .42, .94, .6], [s * .28, .98, 1.0]], jetTop);             // наплыв
+      W([[s * .5, .82, -1.95], [s * 1.6, .8, -2.55], [s * 1.55, .8, -2.95], [s * .5, .82, -2.85]], jetTop);    // стабилизатор
+      const F = [[s * .5, 1.05, -1.45], [s * .82, 2.05, -2.3], [s * .86, 2.05, -2.72], [s * .52, 1.05, -2.62]];
+      g.quad(...F, jetSkin, 0, [0, 1.4, -2]); g.quad(...F.slice().reverse(), jetSkin, 0, [s * 3, 1.4, -2]);   // кили
+      g.quad([s * .74, 1.72, -2.1], [s * .84, 2.0, -2.3], [s * .87, 2.0, -2.6], [s * .77, 1.72, -2.45], WH, 1, [0, 1.8, -2.3]);
+      g.quad([s * .77, 1.72, -2.45], [s * .87, 2.0, -2.6], [s * .84, 2.0, -2.3], [s * .74, 1.72, -2.1], WH, 1, [s * 3, 1.8, -2.3]);
+      for (const [x, z] of [[1.25, -.55], [1.95, -1.0]]) {                                   // ракеты под крылом
+        g.cyl(s * x, .7, z - .65, .07, .07, 1.25, white, { rx: H, seg: 6 });
+        g.cyl(s * x, .7, z + .6, .07, .01, .22, red, { rx: H, seg: 6 });
+        g.box(s * x, .74, z, .05, .14, .5, jetBelly);
+      }
+      g.cyl(s * 2.82, .86, -2.1, .06, .06, 1.2, white, { rx: H, seg: 6 });                 // ракеты на законцовках
+    }
+    g.box(0, .68, -.4, .5, .1, 2.6, jetBelly);
+  }
+
+  // ---------- ударный дрон «Искра»: дельта-крыло, законцовки, толкающий винт ----------
+  function drone(g) {
+    const body = C(0xaeb3ab), bodyDk = C(0x7f857d);
+    const D = (pts, col, m) => { g.quad(...pts, col, m, [0, 5, 0]); g.quad(...pts.slice().reverse(), col, m, [0, -5, 0]); };
+    for (const s of [-1, 1]) {
+      D([[0, .9, 1.55], [s * 2.0, .86, -.95], [s * 1.85, .86, -1.2], [0, .9, -.9]], body);
+      D([[s * .02, .91, 1.2], [s * 1.2, .89, -.15], [s * 1.25, .89, -.32], [s * .02, .91, .95]], bodyDk);   // полоса
+      const Wl = [[s * 1.95, .86, -.92], [s * 1.98, 1.45, -1.15], [s * 1.98, 1.45, -1.42], [s * 1.88, .86, -1.2]];
+      g.quad(...Wl, WH, 1, [0, 1, -1.1]); g.quad(...Wl.slice().reverse(), WH, 1, [s * 5, 1, -1.1]);   // законцовки цвета державы
+    }
+    g.cyl(0, .92, -1.15, .17, .14, 2.55, body, { rx: H, seg: 10, sm: 1 });                  // фюзеляж
+    g.cyl(0, .92, 1.38, .17, .03, .45, C(0x5c5f58), { rx: H, seg: 10, sm: 1 });             // боевая часть
+    g.box(0, .9, .95, .36, .1, .14, safetyGold);
+    g.sph(0, .76, 1.05, .09, glassDk, { seg: 8 });                                           // камера
+    g.cyl(0, .92, -1.4, .15, .17, .3, dark, { rx: H, seg: 10 });                             // двигатель
+    g.cyl(0, .92, -1.46, .55, .55, .015, C(0x8e9590), { rx: H, seg: 16 });                  // диск винта
+    g.box(0, .92, -1.47, 1.0, .05, .06, dark); g.box(0, .92, -1.47, .06, 1.0, .06, dark);
+  }
+
+  // подмена: техника на выставке, в мастерской и на поле боя берёт новые модели
+  const equipment0 = equipmentShape;
+  equipmentShape = function (key, phase = 0) {
+    const g = new Geo();
+    if (key === 'launcher') { launcher(g); return g.out(); }
+    if (key === 'shield') { shield(g, phase); return g.out(); }
+    if (key === 'airguard' || key === 'rescue') { attackHeli(g, phase, key === 'rescue'); return g.out(); }
+    if (key === 'heavy') {
+      truck(g, C(0x6b7883), true);
+      g.cyl(0, 1.19, -.41, 1.07, .95, .78, steel, { seg: 12 });
+      g.box(0, 1.94, -.55, 1.67, .72, 1.65, C(0x72808b)); g.cyl(0, 2.3, -1.2, .2, .2, 3.6, steel, { rx: H - .2, seg: 10 });
+      return g.out();
+    }
+    return equipment0(key, phase);
+  };
+  displayRotor = rotor;
+  MODELS.displayBlades = () => { const g = new Geo(); rotor(g, 0); return g.out(); };
+  MODELS.fieldJet = () => { const g = new Geo(); jet(g); return g.out(); };
+  MODELS.fieldDrone = () => { const g = new Geo(); drone(g); return g.out(); };
+  window.DerzhavaModels = { launcher, shield, attackHeli, jet, drone, truck };
+
+  // ---------- «Москва-Сити» ----------
+  const plaza = M(C(0xb7b2a6), MAT.STONE), lawn = C(0x6c8f45), road = C(0x4a4d50);
+  const lite = col => mixC(col, WH, .38);
+  // полосы этажей в тон стекла: днём чуть светлее, ночью горят (m=2)
+  function floors(g, x, z, w, d, y0, y1, step, col, ry) { for (let y = y0 + step; y < y1 - .5; y += step) g.box(x, y, z, w + .08, .16, d + .08, lite(col), { ry: ry || 0 }, 2); }
+  function prism(g, x, z, r1, r2, h, seg, ry, col, step) {
+    g.cyl(x, .3, z, r1, r2, h, col, { seg, ry });
+    for (let y = .3 + step; y < h - .5; y += step) { const k = r1 + (r2 - r1) * (y / h); g.cyl(x, y, z, k + .07, k + .07, .16, lite(col), { seg, ry }, 2); }
+  }
+  BGEN.moscowcity = function (g) {
+    g.box(0, 0, 0, 35, .3, 31, plaza);
+    g.box(0, .3, 13.8, 35, .04, 2.4, road); g.box(16.2, .3, 0, 2.4, .04, 31, road);
+    for (const [x, z, w, d] of [[-13, 11, 6, 3.5], [12, 11, 5, 3.5], [-14, -12, 5, 4]]) g.box(x, .3, z, w, .1, d, lawn);
+    // Федерация: светлые треугольные «Восток» со шпилем и «Запад», общий стилобат
+    const fed = C(0x93bfdc);
+    g.box(-9, .3, -7, 10, 2.4, 7, C(0x5c7f98));
+    prism(g, -11, -8, 3.6, 3.3, 47, 3, .5, fed, 2.8);
+    prism(g, -6.6, -6.2, 3.0, 2.8, 32, 3, -.55, fed, 2.8);
+    g.cyl(-11, 47, -8, .25, .04, 9, steel, { seg: 6 });
+    // Меркурий: гранёная бронзовая башня, сужается кверху
+    prism(g, .5, -10, 3.3, 1.5, 39, 5, .3, C(0xb88a4f), 3);
+    g.box(.5, 39.2, -10, 1.6, 1.2, 1.6, C(0x8d6a3d));
+    // ОКО: тёмная высокая башня с короной и низкая южная
+    const oko = C(0x34505f);
+    g.box(9.5, .3, -7, 5.4, 43, 5.4, oko); floors(g, 9.5, -7, 5.4, 5.4, .3, 43, 2.7, oko);
+    g.box(9.5, 43.3, -7, 4.2, 2.4, 4.2, C(0x4a6878)); g.box(9.5, 45.7, -7, 2.6, 1.8, 2.6, C(0x9bb3bf));
+    g.box(14, .3, -1, 4, 28, 4, oko); floors(g, 14, -1, 4, 4, .3, 28, 2.7, oko);
+    // Эволюция: закрученная светлая башня
+    for (let i = 0; i < 27; i++) g.box(3, .3 + i * 1.05, 4, 4.4, 1.0, 3.2, i % 2 ? C(0x9cc6d8) : C(0x8cb8cd), { ry: i * .09 }, i % 3 === 1 ? 2 : 0);
+    // Город столиц: ступенчатые «Москва» и «Петербург»
+    const cap1 = C(0x6f8fa8), cap2 = C(0x5c7a92);
+    for (let i = 0; i < 8; i++) { const x = -6 + (i % 2 ? 1.1 : -0.2), y = .3 + i * 4; g.box(x, y, 6, 4.4, 4, 4, i % 2 ? cap1 : cap2); floors(g, x, 6, 4.4, 4, y, y + 4, 2, cap1); }
+    for (let i = 0; i < 6; i++) { const x = -11.5 + (i % 2 ? .9 : -.2), y = .3 + i * 4; g.box(x, y, 6.5, 3.8, 4, 3.6, i % 2 ? cap2 : cap1); floors(g, x, 6.5, 3.8, 3.6, y, y + 4, 2, cap2); }
+    // Империя: широкая пластина
+    const imp = C(0x7d93a3);
+    g.box(10, .3, 7.5, 8.5, 25, 3.4, imp, { ry: -.3 }); floors(g, 10, 7.5, 8.5, 3.4, .3, 25, 2.5, imp, -.3);
+    // подиум с торговым центром
+    g.box(2, .3, -1.5, 13, 3, 5, C(0xcac6bb)); g.box(2, 3.3, -1.5, 13.4, .3, 5.4, C(0x3f6683));
+    kFlag(g, -16, .3, 13, 6, 1);
+  };
+  const MC = { name: 'Москва-Сити', year: 1995, jobs: 8, r: 18, hp: 2400, time: 80, flat: 4,
+    cost: { stone: 260, metal: 170, gold: 380 }, prod: { gold: 2.4 },
+    desc: 'Деловой центр из небоскрёбов: Федерация, Меркурий, ОКО, Эволюция и Город столиц. Клерки приносят много золота, а ночью этажи светятся.' };
+  INDUSTRY.moscowcity = MC; BDEF.moscowcity = MC;
+  BHT.moscowcity = 48; SCAF.moscowcity = [0, 0, 12, 30]; CLSOF.moscowcity = 'merch'; JOBN.moscowcity = 'клерк делового центра';
+  CULTB.moscowcity = .02;
+  const city = BCATS.find(([n]) => n === 'Город'); if (city && !city[1].includes('moscowcity')) city[1].push('moscowcity');
+})();
+</script>
+<script id="units-js">
+// ===== 18_units.js =====
+// ---------- Новые модели воинов: доспехи по эпохам, шлемы, оружие, щиты, сбруя конницы, пушка.
+// Анимация не меняется: доспех рисуется поверх туловища с тем же наклоном позы, остальное — замена деталей.
+// Цвет державы: m=1 (первый цвет экземпляра). ----------
+(function () {
+  if (typeof MODELS === 'undefined' || typeof wkDraw !== 'function' || typeof soldierLook !== 'function') return;
+  const BR = C(0xb5843f), BRD = C(0x8a5f2a), IRON = C(0x7d838a), MAIL = C(0x8f969d), STEEL = C(0xb8c0c6), LEA = C(0x6b4a2e), LEAD = C(0x4a3220);
+  const GOLD = C(0xd2a84a), WHT = C(0xeeeae0), DK = C(0x1c1410), WOOD = C(0x7a5a3a), DWOOD = C(0x4a3626);
+  const O = (ez, x) => SMO(ez, x);
+  // попона: дуга над корпусом коня (центр y=1,2) от бока до бока и вертикальные бока до yb, с золотой каймой внизу
+  function drape(g, r, z0, z1, yb) {
+    const seg = 10, cy = 1.2, P = (a, z) => [Math.cos(a) * r, cy + Math.sin(a) * r, z], N = a => [Math.cos(a), Math.sin(a), 0];
+    for (let i = 0; i < seg; i++) {
+      const a0 = i / seg * Math.PI, a1 = (i + 1) / seg * Math.PI, A = P(a0, z0), B = P(a1, z0), Cc = P(a1, z1), Dd = P(a0, z1), na = N(a0), nb = N(a1);
+      g.triV(A, B, Cc, na, nb, nb, WH, WH, WH, 1); g.triV(A, Cc, Dd, na, nb, na, WH, WH, WH, 1);
+    }
+    for (const s of [-1, 1]) {
+      const x = s * r, Q = [[x, cy, z0], [x, cy, z1], [x, yb, z1], [x, yb, z0]];
+      g.quad(...Q, WH, 1, [0, cy, (z0 + z1) / 2]); g.quad(...Q.slice().reverse(), WH, 1, [s * 3, cy, (z0 + z1) / 2]);
+      g.box(x + s * .008, yb, (z0 + z1) / 2, .02, .06, z1 - z0, GOLD);
+    }
+  }
+
+  // ---------- доспехи поверх туловища (оси туловища: низ y≈−0,07, грудь y≈0,48, перед +z) ----------
+  function cuirassBase(g, col, ez, m) {
+    g.cyl(0, -0.06, 0, 0.18, 0.172, 0.25, col, O(ez), m || 0);
+    g.cyl(0, 0.19, 0, 0.172, 0.234, 0.3, col, O(ez + .02), m || 0);
+    g.cyl(0, 0.49, 0, 0.234, 0.1, 0.09, col, O(ez + .02), m || 0);
+  }
+  const ARMOR = {
+    // античность: бронзовый мускульный панцирь, птеруги (полосы) в цвет державы и кожи
+    pArmA() {
+      const g = new Geo(); cuirassBase(g, BR, .7);
+      for (const s of [-1, 1]) g.sph(s * .085, .33, .14, .07, BRD, { seg: 6, sy: .7, ez: .5 });
+      g.cyl(0, -0.05, 0, 0.19, 0.188, 0.05, BRD, O(.72));
+      for (let k = 0; k < 14; k++) { const a = k / 14 * TAU, x = Math.cos(a) * .19, z = Math.sin(a) * .19 * .74; g.box(x, -0.3, z, .065, .25, .025, k % 2 ? WH : LEA, { ry: Math.PI / 2 - a }, k % 2 ? 1 : 0); }
+      for (const s of [-1, 1]) for (let k = 0; k < 3; k++) g.box(s * .25, .3, (k - 1) * .07, .03, .17, .06, k % 2 ? WH : LEA, null, k % 2 ? 1 : 0);
+      return g.out();
+    },
+    // средние века: кольчуга до колен, сюрко в цвет державы с крестом, ремень
+    pArmM() {
+      const g = new Geo();
+      g.cyl(0, -0.4, 0, 0.225, 0.186, 0.36, MAIL, O(.8));
+      cuirassBase(g, MAIL, .7);
+      for (const z of [.162, -.162]) { g.box(0, -0.42, z, .28, .9, .02, WH, null, 1); }
+      g.box(0, .16, .175, .05, .24, .012, WHT); g.box(0, .25, .175, .18, .05, .012, WHT);
+      g.cyl(0, -0.03, 0, 0.198, 0.196, 0.055, LEA, O(.74)); g.box(0, -0.01, .19, .06, .05, .02, GOLD);
+      return g.out();
+    },
+    // Новое время: мундир в цвет державы, белые перевязи, пуговицы, эполеты
+    pArmN() {
+      const g = new Geo();
+      g.cyl(0, -0.42, 0, 0.228, 0.186, 0.38, WH, O(.78), 1);
+      cuirassBase(g, WH, .7, 1);
+      for (const z of [.158, -.158]) for (const r of [.5, -.5]) g.box(0, -.2, z, .05, .7, .016, WHT, { rz: r });
+      for (let i = 0; i < 5; i++) g.box(0, -.05 + i * .085, .166, .026, .026, .014, GOLD);
+      for (const s of [-1, 1]) { g.box(s * .2, .47, 0, .11, .04, .13, GOLD); g.box(s * .2, .44, .06, .1, .05, .01, GOLD); }
+      g.cyl(0, -0.03, 0, 0.196, 0.194, 0.05, WHT, O(.74));
+      g.box(0, .52, .09, .14, .06, .03, DK);
+      return g.out();
+    },
+    // лучники: кожаный доспех с полосой цвета державы
+    pArmL() {
+      const g = new Geo(); cuirassBase(g, LEA, .7);
+      g.cyl(0, .3, 0, .214, .222, .05, WH, O(.72), 1); g.cyl(0, .05, 0, .176, .174, .05, WH, O(.72), 1);
+      g.cyl(0, -0.04, 0, 0.19, 0.188, 0.05, LEAD, O(.74));
+      g.box(-.1, .1, -.17, .09, .5, .07, LEAD, { rz: -.2 }); g.cyl(-.1, .35, -.19, .04, .04, .22, WOOD, { seg: 5 });   // колчан
+      return g.out();
+    },
+  };
+  Object.assign(MODELS, ARMOR);
+
+  // ---------- головы: лицо как в игре + новое снаряжение ----------
+  function face(g, hair) {
+    const SM = x => Object.assign({ seg: 8, sm: 1 }, x || {});
+    g.cyl(0, -0.03, 0, 0.05, 0.046, 0.13, WH, { seg: 6, sm: 1, noBottom: 1, noTop: 1 }, 4);
+    g.sph(0, 0.19, 0.006, 0.106, WH, SM({ sy: 1.2, ez: 0.97 }), 4);
+    g.box(0, 0.165, 0.105, 0.03, 0.045, 0.03, [0.9, 0.86, 0.86], null, 4);
+    for (const s of [-1, 1]) g.box(s * 0.04, 0.205, 0.099, 0.022, 0.014, 0.012, [0.05, 0.04, 0.035]);
+    if (hair) g.sph(0, 0.222, -0.022, 0.113, hair, SM({ sy: 1.08 }));
+  }
+  const HEADS = {
+    // бронзовый шлем: нащёчники, назатыльник, высокий гребень цвета державы
+    pHHelm() {
+      const g = new Geo(); face(g, DK);
+      g.sph(0, 0.235, -0.01, 0.132, BR, { seg: 10, sm: 1, sy: 0.98, half: 1 });
+      g.cyl(0, 0.17, -0.01, 0.132, 0.134, 0.07, BR, { seg: 10, sm: 1, noTop: 1, noBottom: 1 });
+      for (const s of [-1, 1]) g.box(s * 0.105, 0.08, 0.05, 0.03, 0.14, 0.1, BR);
+      g.box(0, 0.09, -0.12, 0.2, 0.1, 0.04, BR, { rx: .3 });
+      for (let k = 0; k < 7; k++) { const a = -0.9 + k * 0.3; g.box(0, 0.33 + Math.cos(a) * 0.06, -0.01 + Math.sin(a) * 0.12, 0.04, 0.12, 0.07, WH, { rx: a }, 1); }
+      g.cyl(0, 0.36, -0.01, 0.025, 0.025, 0.05, BRD, { seg: 6 });
+      return g.out();
+    },
+    // железный шлем с наносником и кольчужной бармицей
+    pHHelmC() {
+      const g = new Geo(); face(g, DK);
+      g.cyl(0, 0.2, -0.01, 0.135, 0.02, 0.25, IRON, { seg: 10, sm: 1 });
+      g.cyl(0, 0.17, -0.01, 0.137, 0.136, 0.05, WH, { seg: 10, sm: 1, noTop: 1, noBottom: 1 }, 1);
+      g.box(0, 0.12, 0.128, 0.025, 0.12, 0.02, IRON);
+      g.cyl(0, -0.02, -0.01, 0.15, 0.134, 0.19, MAIL, { seg: 10, sm: 1, noTop: 1, noBottom: 1, ez: .9 });
+      return g.out();
+    },
+    // кивер Нового времени: козырёк, кокарда, плюмаж цвета державы
+    pHShako() {
+      const g = new Geo(); face(g, DK);
+      g.cyl(0, 0.25, -0.01, 0.118, 0.13, 0.21, C(0x1f2226), { seg: 10, sm: 1 });
+      g.cyl(0, 0.26, -0.01, 0.121, 0.122, 0.025, GOLD, { seg: 10, sm: 1, noTop: 1, noBottom: 1 });
+      g.box(0, 0.25, 0.12, 0.2, 0.02, 0.08, C(0x15171a), { rx: -.25 });
+      g.sph(0, 0.38, 0.12, 0.028, GOLD, { seg: 6 });
+      g.cyl(0, 0.46, 0.08, 0.035, 0.012, 0.16, WH, { seg: 6, sm: 1 }, 1);
+      for (const s of [-1, 1]) g.box(s * .1, .12, .04, .012, .14, .012, GOLD, { rz: s * .3 });
+      return g.out();
+    },
+  };
+  Object.assign(MODELS, HEADS);
+
+  // ---------- оружие (кисть у y≈−0,6, остриё вперёд вниз) ----------
+  Object.assign(MODELS, {
+    pSpear() { const g = new Geo(); g.cyl(0, -1.2, 0.1, 0.022, 0.02, 2.42, WOOD, { seg: 6 }); g.cyl(0, 1.18, 0.1, 0.03, 0.026, 0.1, IRON, { seg: 6 }); g.sph(0, 1.38, 0.1, 0.06, STEEL, { seg: 6, sy: 3.4, ez: 0.35 }); g.cyl(0, -1.32, 0.1, 0.012, 0.03, 0.12, IRON, { seg: 5 }); g.box(0, -0.55, 0.1, 0.05, 0.16, 0.05, LEA); return g.out(); },
+    pSarissa() { const g = new Geo(); g.cyl(0, -1.05, 0.1, 0.022, 0.02, 4.1, WOOD, { seg: 6 }); g.cyl(0, 3.03, 0.1, 0.03, 0.026, 0.1, IRON, { seg: 6 }); g.sph(0, 3.22, 0.1, 0.06, STEEL, { seg: 6, sy: 3.4, ez: 0.35 }); g.cyl(0, 0.9, 0.1, 0.028, 0.028, 0.1, IRON, { seg: 6 }); return g.out(); },
+    pSword() {
+      const g = new Geo();
+      g.cyl(0, -0.62, 0.1, 0.022, 0.022, 0.13, LEAD, { seg: 6 }); g.sph(0, -0.5, 0.1, 0.03, GOLD, { seg: 6 });
+      g.box(0, -0.68, 0.1, 0.16, 0.03, 0.045, GOLD);
+      g.box(0, -1.24, 0.1, 0.06, 0.56, 0.014, STEEL); g.box(0, -1.24, 0.1, 0.012, 0.5, 0.018, C(0x8e979d));
+      g.pyr(0, -1.24, 0.1, 0.06, 0.15, 0.014, STEEL, { rx: Math.PI });
+      return g.out();
+    },
+    pAxe() { const g = new Geo(); g.cyl(0, -1.4, 0.1, 0.024, 0.022, 0.95, WOOD, { seg: 6 }); g.box(0, -1.42, 0.2, 0.025, 0.14, 0.12, STEEL); g.pyr(0, -1.52, 0.29, 0.025, 0.32, 0.1, STEEL); g.box(0, -1.42, 0.04, 0.03, 0.06, 0.06, IRON); return g.out(); },
+    pMusket() {
+      const g = new Geo();
+      g.cyl(0, -1.84, 0.12, 0.022, 0.02, 1.15, IRON, { seg: 6 });
+      g.box(0, -0.98, 0.1, 0.06, 0.62, 0.07, WOOD); g.box(0, -0.6, 0.07, 0.07, 0.3, 0.12, DWOOD, { rx: .12 });
+      g.box(0, -1.05, 0.15, 0.03, 0.09, 0.06, GOLD); g.box(0, -0.98, 0.04, 0.03, 0.1, 0.02, IRON);
+      g.box(0, -2.18, 0.15, 0.012, 0.38, 0.012, STEEL);   // штык
+      for (const y of [-1.25, -1.55]) g.cyl(0, y, 0.12, 0.028, 0.028, 0.02, GOLD, { seg: 6 });
+      return g.out();
+    },
+    pXbow() { const g = new Geo(); g.box(0, -1.42, 0.1, 0.05, 0.85, 0.06, WOOD); g.box(0, -1.4, 0.1, 0.66, 0.04, 0.035, DWOOD, { rz: 0 }); for (const s of [-1, 1]) g.box(s * 0.3, -1.37, 0.1, 0.06, 0.04, 0.035, IRON); g.box(0, -1.38, 0.13, 0.62, 0.008, 0.008, C(0xd8d0b8)); g.box(0, -1.05, 0.12, 0.03, 0.06, 0.04, IRON); return g.out(); },
+    // круглый щит: лицевая сторона цвета державы, обод, умбон, заклёпки, полоса
+    pShield() {
+      const g = new Geo(), R = -Math.PI / 2;
+      g.cyl(0.1, -0.42, 0.04, 0.35, 0.35, 0.05, WH, { seg: 16, rz: R, top: WH }, 1);
+      g.cyl(0.098, -0.42, 0.04, 0.37, 0.37, 0.04, IRON, { seg: 16, rz: R, noTop: 1, noBottom: 1 });
+      g.cyl(0.15, -0.42, 0.04, 0.085, 0.04, 0.06, GOLD, { seg: 10, rz: R });
+      g.box(0.152, -0.42, 0.04, 0.012, 0.62, 0.07, WHT);
+      for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; g.box(0.152, -0.42 + Math.cos(a) * 0.29, 0.04 + Math.sin(a) * 0.29, 0.01, 0.03, 0.03, GOLD); }
+      return g.out();
+    },
+    pScutum() {
+      const g = new Geo();
+      g.box(0.1, -0.87, 0.04, 0.06, 0.96, 0.56, WH, null, 1);
+      for (const z of [-0.27, 0.27]) g.box(0.13, -0.87, 0.04 + z, 0.02, 0.96, 0.03, GOLD);
+      for (const y of [-0.87, 0.07]) g.box(0.13, y, 0.04, 0.02, 0.03, 0.56, GOLD);
+      g.sph(0.15, -0.4, 0.04, 0.08, GOLD, { seg: 8, half: 1, rz: -Math.PI / 2 });
+      for (const s of [-1, 1]) g.box(0.135, -0.4, 0.04 + s * 0.17, 0.01, 0.06, 0.2, GOLD, { rx: s * 0.6 });
+      return g.out();
+    },
+    // конская сбруя по форме корпуса: дуга над спиной и свисающие бока цвета державы с золотой каймой
+    hSaddle() { const g = new Geo(); drape(g, .38, -.42, .36, 1.0); g.box(0, 1.55, -0.05, 0.4, 0.11, 0.44, LEA); g.box(0, 1.6, 0.16, 0.28, 0.1, 0.06, LEAD); for (const s of [-1, 1]) { g.box(s * .41, 1.0, .05, .02, .34, .02, LEAD); g.box(s * .41, .84, .05, .07, .03, .06, IRON); } return g.out(); },
+    hCap() { const g = new Geo(); drape(g, .375, -.8, .62, .8); g.box(0, 1.56, -0.05, 0.4, 0.11, 0.44, LEA); g.box(0, 1.08, .7, .62, .1, .05, GOLD, { rx: .5 }); g.box(0, 1.15, -.86, .5, .08, .04, LEAD); for (const s of [-1, 1]) g.box(s * .39, 1.05, -.1, .01, .22, .22, WHT); g.sph(0, 1.97, 1.24, 0.14, IRON, { seg: 7, ez: 2.1, rx: 0.55 }); return g.out(); },
+    // полевое орудие: лафет цвета дерева, колёса со спицами, бронзовый ствол с поясами
+    cannon() {
+      const g = new Geo();
+      g.box(0, 0.32, -0.35, 0.5, 0.24, 1.7, DWOOD, { rx: 0.1 }); g.box(0, 0.04, -1.25, 0.2, 0.12, 0.7, DWOOD);
+      for (const s of [-1, 1]) {
+        g.box(s * 0.25, 0.5, -0.2, 0.06, 0.32, 1.2, WOOD);
+        g.cyl(s * 0.42, 0.46, 0.05, 0.47, 0.47, 0.07, WOOD, { seg: 16, rz: Math.PI / 2, noTop: 1, noBottom: 1 });
+        g.cyl(s * 0.43, 0.46, 0.05, 0.49, 0.49, 0.05, IRON, { seg: 16, rz: Math.PI / 2, noTop: 1, noBottom: 1 });
+        for (let k = 0; k < 6; k++) g.grp(s * 0.42, 0.46, 0.05, 0, () => g.box(0, 0, 0, 0.04, 0.88, 0.05, WOOD, { rx: k * Math.PI / 6 }));
+        g.cyl(s * 0.46, 0.46, 0.05, 0.1, 0.1, 0.1, IRON, { seg: 8, rz: Math.PI / 2 });
+      }
+      g.cyl(0, 0.78, -0.55, 0.19, 0.13, 2.0, BR, { seg: 12, rx: Math.PI / 2 - 0.07, sm: 1 });
+      for (const k of [0.2, 0.75, 1.6, 1.95]) g.cyl(0, 0.78 + Math.sin(.07) * k, -0.55 + k, 0.2 - k * 0.03, 0.2 - k * 0.03, 0.05, BRD, { seg: 12, rx: Math.PI / 2 - 0.07 });
+      g.sph(0, 0.79, -0.66, 0.11, BR, { seg: 8 });
+      g.box(0, 0.32, -1.6, 0.06, 0.06, 0.4, IRON);
+      return g.out();
+    },
+  });
+
+  // ---------- кто во что одет ----------
+  const look0 = soldierLook;
+  soldierLook = function (s, kind) {
+    const L = look0(s, kind); if (kind === 'bandit') return L;
+    const D = unitDef(s, kind), era = s.era || 0, ranged = D.rng > 5, team = kind === 'merc' ? L.top : s.col;
+    L.armorC = team; L.armorT = L.trim;
+    if (era >= 2) { L.armor = 'pArmN'; if (!D.knight) L.head = 'pHShako'; L.armorC = kind === 'merc' ? L.top : mixC(team, C(0x202430), .15); }
+    else if (ranged) L.armor = 'pArmL';
+    else if (era === 0) L.armor = (s.nation.cult === 'med' || s.nation.cult === 'east' || s.nation.cult === 'egypt') ? 'pArmA' : 'pArmL';
+    else L.armor = 'pArmM';
+    if (D.cav || D.knight) L.horse = D.knight ? 'hCap' : 'hSaddle';
+    return L;
+  };
+  const draw0 = wkDraw;
+  wkDraw = function (w, gy) {
+    draw0(w, gy);
+    const L = w.look; if (!L || !L.armor) return;
+    const P = POSE, sc = L.sc, py = gy + (HUM.hip + P.dy) * sc, c = L.armorC || L.top, t = L.armorT || L.trim;
+    PB(L.armor).push(w.x, py, w.z, w.yaw, sc, 1, P.tl, 1, c[0], c[1], c[2], 0, t[0], t[1], t[2], 1);
+  };
+  const horse0 = horseDraw;
+  horseDraw = function (m, gy, team) {
+    horse0(m, gy, team);
+    const L = m.look, k = L && L.horse || 'hSaddle', S = 1.12, mv = m.st === 'walk', bob = mv ? Math.abs(Math.sin(m.ph * 1.6)) * 0.04 : 0, c = L && L.armorC || team;
+    PB(k).push(m.x, gy + bob * S, m.z, m.yaw, S, 1, 0, 1, c[0], c[1], c[2], 0, 1, 1, 1, 1);
+  };
+  window.DerzhavaUnits = { ARMOR: Object.keys(ARMOR), HEADS: Object.keys(HEADS) };
+})();
+</script>
+<script id="menucity-js">
+// ===== 19_menucity.js =====
+// ---------- город за главным меню: вокруг Спасской башни стоят храмы, рынок, усадьбы и дома, по улицам ходят жители,
+// из труб идёт дым. Это только декорация предпросмотра: в партию ничего не попадает. ----------
+(function () {
+  if (typeof R === 'undefined' || typeof BGEN === 'undefined') return;
+  const ERA = 2, CULT = 'rus', NAT = NATIONS.find(n => n.id === 'muscovy') || NATIONS[0];
+  const S = { id: 99, nation: NAT, era: ERA, col: C(0xb8322a), buildings: [] };
+  const MC = { on: false, world: null, items: [], walkers: [], smokeT: 0, last: 0, x: 0, z: 0 };
+  const CENT = [14, 15, 16, 17, 17, 18, 16, 13];
+
+  function geomOf(it) {
+    if (it.type === 'landmark') return R.geom('menu|lm', () => { const g = new Geo(); drawCapital(g, 'muscovy', { finish: 'local', century: 17 }); return g.out(); });
+    if (it.type === 'house') return R.geom('menu|house|' + it.century + '|' + it.finish, () => { const g = new Geo(); centuryHouse(g, facadeStyle(S, it.finish, ERA, CULT), it.century); return g.out(); });
+    return buildingGeom(it.type, ERA, CULT, '');
+  }
+  // ровное сухое место радиуса r, не задевающее уже поставленные здания
+  function free(x, z, r) {
+    const h = heightAt(x, z); if (h < 0.7) return false;
+    for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, hh = heightAt(x + Math.cos(a) * r, z + Math.sin(a) * r); if (hh < 0.5 || Math.abs(hh - h) > 2.2 + r * 0.1) return false; }
+    for (const o of MC.items) if (Math.hypot(o.x - x, o.z - z) < o.r + r + 1.6) return false;
+    return true;
+  }
+  function put(type, x, z, rot, extra) {
+    const r = type === 'landmark' ? 11 : (BDEF[type] && BDEF[type].r) || 6;
+    if (!free(x, z, r)) return null;
+    flattenAt(x, z, r, heightAt(x, z));   // как в игре: площадка под зданием ровная, с утоптанной землёй
+    const it = Object.assign({ type, x, z, y: heightAt(x, z), rot, r }, extra || {});
+    it.geom = geomOf(it); MC.items.push(it); return it;
+  }
+  // ищем место по спирали вокруг точки
+  function near(type, cx, cz, r0, r1, face, extra) {
+    for (let rad = r0; rad <= r1; rad += 4) for (let i = 0; i < 24; i++) {
+      const a = i * Math.PI / 12 + rad * 0.37, x = cx + Math.cos(a) * rad, z = cz + Math.sin(a) * rad;
+      const it = put(type, x, z, face ? Math.atan2(MC.x - x, MC.z - z) : a, extra); if (it) return it;
+    }
+    return null;
+  }
+  function build(r) {
+    MC.items = []; MC.walkers = []; MC.on = false;
+    if (!r || !W.trees) return null;
+    let rnd = mulberry32((W.seed || 1) + 77);
+    // центр — самое ровное место у центра области
+    let c = null;
+    for (let rad = 0; rad < 90 && !c; rad += 6) for (let i = 0; i < 16 && !c; i++) {
+      const a = i * Math.PI / 8, x = r.x + Math.cos(a) * rad, z = r.z + Math.sin(a) * rad;
+      if (free(x, z, 15)) c = { x, z };
+    }
+    if (!c) return null;
+    MC.x = c.x; MC.z = c.z;
+    put('landmark', c.x, c.z, rnd() * Math.PI * 2);
+    near('church', c.x, c.z, 20, 40, true); near('market', c.x, c.z, 22, 44, true); near('church', c.x, c.z, 34, 60, true);
+    near('manor', c.x, c.z, 30, 56, true); near('school', c.x, c.z, 28, 56, true); near('manor', c.x, c.z, 40, 70, true);
+    near('trade', c.x, c.z, 40, 76, true); near('store', c.x, c.z, 44, 80, true); near('stable', c.x, c.z, 50, 86, true);
+    // кварталы: кольца домов, между ними — радиальные улицы
+    const fin = ['local', 'local', 'local', 'limestone', 'brick', 'local'];
+    for (let rad = 22; rad <= 92; rad += 11.5) {
+      const n = Math.floor(rad * Math.PI * 2 / 13.5);
+      for (let i = 0; i < n; i++) {
+        const a = (i + (rad / 11.5 % 2) * 0.5) / n * Math.PI * 2, sector = ((a % (Math.PI / 3)) + Math.PI / 3) % (Math.PI / 3);
+        if (sector < 0.11 || rnd() < 0.12) continue;
+        const rr = rad + (rnd() - 0.5) * 3, x = c.x + Math.cos(a) * rr, z = c.z + Math.sin(a) * rr;
+        put('house', x, z, Math.atan2(c.x - x, c.z - z) + (rnd() - 0.5) * 0.25, { century: CENT[(rnd() * CENT.length) | 0], finish: fin[(rnd() * fin.length) | 0] });
+      }
+    }
+    for (let k = 0; k < 7; k++) near('farm', c.x, c.z, 100, 150, false);
+    near('lumber', c.x, c.z, 96, 140, false); near('tower', c.x, c.z, 92, 120, true); near('tower', c.x, c.z, 92, 120, true);
+    // деревья, попавшие в постройки, убираем; партия создаёт мир заново, так что в игру это не попадает
+    const T = W.trees;
+    for (let k = 0; k < T.n; k++) {
+      if (Math.abs(T.x[k] - c.x) > 170 || Math.abs(T.z[k] - c.z) > 170) continue;
+      for (const o of MC.items) if (Math.hypot(T.x[k] - o.x, T.z[k] - o.z) < o.r + 2.5) { T.alive[k] = 0; break; }
+    }
+    buildTreeBatches();
+    // жители
+    const homes = MC.items.filter(o => o.type !== 'farm' && o.type !== 'lumber' && o.type !== 'tower'), cls = ['peas', 'peas', 'work', 'work', 'merch', 'merch', 'noble'];
+    for (let k = 0; k < 70 && homes.length; k++) {
+      const from = homes[(rnd() * homes.length) | 0], a = rnd() * Math.PI * 2, look = mkLook(S, cls[(rnd() * cls.length) | 0], rnd);
+      const w = { x: from.x + Math.cos(a) * (from.r + 1.5), z: from.z + Math.sin(a) * (from.r + 1.5), yaw: a, ph: rnd() * 6, sp: (look.long ? 1.25 : 1.55) + rnd() * 0.5, look, seed: rnd(), st: 'walk', A: look.long ? 0.36 : 0.5, tx: 0, tz: 0, wait: 0 };
+      w.k = Math.PI / (2 * HUM.hip * Math.sin(w.A) * look.sc); aim(w, homes, rnd); MC.walkers.push(w);
+    }
+    MC.homes = homes; MC.world = W.trees; MC.on = true;
+    return { x: c.x, z: c.z };
+  }
+  function aim(w, homes, rnd) {
+    const b = homes[((rnd || Math.random)() * homes.length) | 0], a = Math.atan2(w.x - b.x, w.z - b.z) + (Math.random() - 0.5) * 1.2;
+    w.tx = b.x + Math.sin(a) * (b.r + 2); w.tz = b.z + Math.cos(a) * (b.r + 2);
+  }
+  function draw() {
+    if (G.started || !MC.on || MC.world !== W.trees || (typeof DUEL !== 'undefined' && DUEL.mapOn)) return;
+    const now = performance.now(), dt = Math.min(0.1, (now - (MC.last || now)) / 1000); MC.last = now;
+    const houses = [];
+    for (const it of MC.items) {
+      if (!inView(it.x, it.y + 8, it.z, it.r + 30)) continue;
+      R.batch(it.geom.key).push(it.x, it.y, it.z, it.rot, 1, 1, 0, 1, S.col[0], S.col[1], S.col[2], 0, 1, 1, 1, 0);
+      if (it.type === 'house') houses.push(it);
+    }
+    MC.smokeT -= dt;
+    if (MC.smokeT <= 0 && houses.length) {
+      MC.smokeT = 0.08; const b = houses[(Math.random() * houses.length) | 0], c = Math.cos(b.rot), s = Math.sin(b.rot);
+      spawnPart(b.x + 1.3 * c - 1.8 * s, b.y + 5.6, b.z - 1.3 * s - 1.8 * c, 0.5, 1.6, 0.2, 3.4, 1.0, 1.2, [0.76, 0.76, 0.76], 0.3);
+    }
+    if (CAM.dist > 320) return;
+    for (const w of MC.walkers) {
+      if (w.wait > 0) { w.wait -= dt; w.st = 'idle'; }
+      else {
+        const dx = w.tx - w.x, dz = w.tz - w.z, d = Math.hypot(dx, dz);
+        if (d < 0.8) { w.wait = 1 + Math.random() * 5; aim(w, MC.homes); }
+        else { const st = Math.min(d, w.sp * dt); w.x += dx / d * st; w.z += dz / d * st; w.yaw = Math.atan2(dx, dz); w.ph += st * w.k; w.st = 'walk'; }
+      }
+      if (!inView(w.x, 1, w.z, 2)) continue;
+      wkPose(w); wkDraw(w, heightAt(w.x, w.z));
+    }
+  }
+  const dl0 = drawLandmarks;
+  drawLandmarks = function () { dl0(); try { draw(); } catch (e) { MC.on = false; console.warn('menu city', e); } };
+  window.DerzhavaMenuCity = { build, state: MC };
+})();
+</script>
+<script id="news-js">
+// ===== 20_news.js =====
+// ---------- «Новости» в главном меню: что добавлено в каждой версии. Пока игрок не открыл свежую версию, у кнопки горит метка «новое». ----------
+(function () {
+  const nav = $('harbor-actions'), menu = nav && nav.parentElement; if (!nav || !menu) return;
+  const NEWS = [
+    { v: '0.1', date: '22 ноября 2026', title: 'Испытание плана', items: [
+      ['Новые воины', 'Доспехи по эпохам: бронзовые кирасы и шлемы с гребнем в Античности, кольчуги с накидками в цвет державы в Средневековье, мундиры с киверами в Новое время. Новые мечи, копья, мушкеты со штыком и щиты с гербовым цветом.'],
+      ['Конница и пушки', 'Рыцарские кони в попонах с золотой каймой, у конницы — сёдла и чепраки. Полевое орудие с колёсами на спицах.'],
+      ['Новая техника', 'Переделаны РСЗО, военные дроны, ударные вертолёты, истребители и ПВО: больше деталей, вращающиеся винты.'],
+      ['Москва-Сити', 'Деловой центр с башнями «Федерация», «Меркурий», «ОКО» и «Эволюция». Раздел «Город», с 1995 года, приносит золото.'],
+      ['Город за меню', 'В главном меню теперь живой город: Спасская башня, храмы, рынок, кварталы, жители на улицах и дым из труб.'],
+      ['Новости', 'Эта вкладка: здесь будет написано, что появилось в каждой версии.'],
+      ['Демонстрация плана', 'Кнопка «Демонстрация плана» и «Сверка плана · тест 0.1» показывают, что из плана уже сделано.', 'plan-show'],
+    ] },
+    { v: '0.0.3', date: '21 ноября 2026', title: 'Игра онлайн', items: [
+      ['Мультиплеер', 'Создай комнату, отправь ссылку другу и играйте вдвоём прямо в браузере. Связь идёт через зашифрованный канал.'],
+      ['Сайт игры', 'Держава открывается по ссылке на GitHub Pages — ничего не нужно скачивать.'],
+      ['Режим разработчика', 'Теперь закрыт логином и паролем.'],
+    ] },
+    { v: '0.0.2', date: '21 ноября 2026', title: 'Живой мир', items: [
+      ['Новое главное меню', 'За меню — настоящий мир игры, камера медленно облетает берег. Быстрый старт сразу в нужную эпоху.'],
+      ['Графика', 'Мягче свет и тени, сочнее цвета, отдельная настройка картинки для телефонов.'],
+      ['Транспорт и энергетика', 'Самолёты Boeing и Airbus, аэропорты, военная база с дронами, вертолётами и самолётами, РСЗО и ПВО, АЭС, ГЭС и ВЭС. Новые края: зима и пустыня.'],
+    ] },
+    { v: '0.0.1', date: '20 ноября 2026', title: 'Удобство на телефоне', items: [
+      ['Скорость игры', 'Кнопки скорости на телефоне.'],
+      ['Сообщения', 'Понятнее сообщения, строка с днём и сроки ответа на письма двора.'],
+    ] },
+  ];
+  const KEY = 'derzhava.transport-test.news-seen', latest = NEWS[0].v;
+  let seen = ''; try { seen = localStorage.getItem(KEY) || ''; } catch { }
+
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.id = 'home-news'; btn.className = 'harbor-action';
+  btn.setAttribute('aria-controls', 'harbor-news'); btn.setAttribute('aria-expanded', 'false');
+  btn.innerHTML = 'Новости' + (seen !== latest ? '<span class="news-dot">новое</span>' : '');
+  const tests = $('home-tests'); (tests || nav.lastElementChild).after(btn);
+
+  const sec = document.createElement('section');
+  sec.id = 'harbor-news'; sec.hidden = true; sec.setAttribute('aria-labelledby', 'harbor-news-title');
+  const esc = t => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+  sec.innerHTML = '<h2 id="harbor-news-title" tabindex="-1">Новости</h2><div class="news-list">' + NEWS.map((n, i) =>
+    `<article class="news-ver${i ? '' : ' news-new'}"><header><b>Версия ${esc(n.v)}</b><span>${esc(n.date)}</span></header><h3>${esc(n.title)}</h3><ul>` +
+    n.items.filter(x => !x[2] || $(x[2])).map(([h, t]) => `<li><strong>${esc(h)}.</strong> ${esc(t)}</li>`).join('') + '</ul></article>').join('') +
+    '</div><button type="button" id="news-back"><span aria-hidden="true">←</span> Главное меню</button>';
+  const trials = $('harbor-trials'); (trials || nav).after(sec);
+
+  function show(open) {
+    nav.hidden = open; sec.hidden = !open; btn.setAttribute('aria-expanded', String(open));
+    if (open) {
+      if (trials) trials.hidden = true;
+      try { localStorage.setItem(KEY, latest); } catch { }
+      const dot = btn.querySelector('.news-dot'); if (dot) dot.remove();
+      sec.querySelector('.news-list').scrollTop = 0; $('harbor-news-title').focus({ preventScroll: true });
+    }
+    $('start').scrollTop = 0;
+  }
+  btn.addEventListener('click', () => show(true));
+  sec.querySelector('#news-back').addEventListener('click', () => { show(false); btn.focus({ preventScroll: true }); });
+  sec.addEventListener('keydown', e => { if (e.key === 'Escape') { show(false); btn.focus({ preventScroll: true }); } });
+  // любое возвращение на главную закрывает новости
+  if (typeof showHarborTrials === 'function') {
+    const sht = showHarborTrials;
+    showHarborTrials = function (open) { if (!sec.hidden) { sec.hidden = true; btn.setAttribute('aria-expanded', 'false'); } return sht(open); };
+  }
+
+  const css = document.createElement('style'); css.id = 'news-css';
+  css.textContent = `
+#home-view .news-dot{margin-left:10px;padding:3px 8px;border-radius:999px;background:#d6ad52;color:#1b1710;font:700 11px/1 var(--ui);letter-spacing:.06em;text-transform:uppercase;vertical-align:middle}
+#start.live #home-view #home-news{justify-content:flex-start}
+#harbor-news{margin-top:clamp(22px,4.5vh,44px);color:#f8ecd4}
+#harbor-news-title{font:700 12px/1 var(--ui);letter-spacing:.2em;text-transform:uppercase;color:#e2bd6a;margin:0 0 10px}
+#harbor-news-title:focus{outline:none}
+#harbor-news .news-list{max-height:min(58vh,560px);overflow:auto;padding-right:6px;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(214,173,82,.5) transparent}
+#harbor-news .news-ver{margin:0 0 12px;padding:14px 16px;border:1px solid rgba(248,236,212,.16);border-radius:12px;background:rgba(9,12,21,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#harbor-news .news-new{border-color:rgba(214,173,82,.55)}
+#harbor-news .news-ver header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font:600 12px/1.2 var(--ui);color:#cfc5ad}
+#harbor-news .news-ver header b{color:#e2bd6a;letter-spacing:.08em;text-transform:uppercase}
+#harbor-news .news-ver h3{margin:6px 0 8px;font:400 23px/1.15 var(--disp);color:#fff3dc}
+#harbor-news ul{margin:0;padding:0;list-style:none}
+#harbor-news li{position:relative;margin:0 0 7px;padding-left:14px;font:400 14px/1.45 var(--ui);color:#ddd3bd}
+#harbor-news li::before{content:'';position:absolute;left:0;top:.6em;width:5px;height:5px;border-radius:50%;background:#d6ad52}
+#harbor-news li strong{color:#fff3dc;font-weight:600}
+#news-back{display:flex;align-items:center;gap:10px;min-height:44px;margin-top:6px;padding:6px 16px 6px 18px;width:100%;background:transparent;border:0;border-left:2px solid transparent;color:#f0d7ac;font:500 15px/1.2 var(--ui);cursor:pointer}
+#news-back:hover{background:rgba(248,236,212,.08);border-left-color:#d6ad52;color:#fff}
+@media (max-aspect-ratio:1/1){#harbor-news{margin-top:18px}#harbor-news .news-list{max-height:52vh}#harbor-news .news-ver h3{font-size:20px}}
+@media (orientation:landscape) and (max-height:540px){#harbor-news .news-list{max-height:62vh}}
+`;
+  document.head.append(css);
 })();
 </script>
 </body>
