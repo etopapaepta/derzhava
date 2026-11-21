@@ -794,6 +794,20 @@ body #adv{bottom:calc(68px + env(safe-area-inset-bottom,0px))}
 /* ===== мультиплеер ===== */
 #duel-lobby .mp-hint{margin:12px 0 0;font:400 13px/1.45 var(--ui);color:var(--mut)}
 </style>
+<style id="devlock-css">
+/* ===== замок режима разработчика ===== */
+#dev-lock{display:grid;gap:6px;margin:0 0 4px}
+#dev-lock[hidden]{display:none}
+#dev-lock .dev-lock-title{margin:0;font:400 20px/1.2 var(--disp);color:var(--ink)}
+#dev-lock .dev-lock-text{margin:0 0 6px;color:var(--mut);font-size:13px}
+#dev-lock label{font-size:12px;color:var(--mut);margin-top:4px}
+#dev-lock input{width:100%;min-height:38px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:500 15px/1.2 var(--ui)}
+#dev-lock input:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
+#dev-lock .btn{margin-top:8px;justify-self:start}
+#dev-lock-error{margin:2px 0 0;min-height:1.2em;color:var(--bad);font-size:13px}
+#developer-panel.dev-locked > :not(#dev-lock){display:none!important}
+#dev-logout{margin-top:12px}
+</style>
 </head>
 <body>
 <canvas id="gl"></canvas>
@@ -18227,6 +18241,57 @@ boot();
     openRoom(parts.id, parts.invite, parts.first);
   }
   const last = stored('last-room'); if (last && own(last)) ensureHost(last);
+})();
+</script>
+<script id="devlock-js">
+// ===== 16_devlock.js =====
+// ---------- Замок на режим разработчика: открывается логином и паролем.
+// В коде хранится только SHA-256 от пары, сам пароль из страницы не прочитать. Открытие живёт до закрытия вкладки
+// (sessionStorage) или до кнопки «Закрыть». Это защита от случайных игроков, а не от правки кода страницы. ----------
+(function () {
+  const panel = $('developer-panel'); if (!panel || typeof developerActive !== 'function') return;
+  const HASH = 'bf1a9e52f0c97893cf139b80619c5925b5c005e22fb51bea962af514f9ef9699';
+  const KEY = 'derzhava.dev-unlocked';
+  let unlocked = false; try { unlocked = sessionStorage.getItem(KEY) === HASH; } catch {}
+
+  // без входа режим не действует нигде: ни выдача, ни бесплатные постройки, ни смена эпохи
+  const active0 = developerActive;
+  developerActive = function (s) { return unlocked && active0(s); };
+
+  const box = document.createElement('form'); box.id = 'dev-lock'; box.noValidate = true; box.autocomplete = 'on';
+  box.innerHTML = '<p class="dev-lock-title">Режим разработчика закрыт</p>'
+    + '<p class="dev-lock-text">Войди, чтобы открыть выдачу ресурсов, зданий и войск.</p>'
+    + '<label for="dev-login">Логин</label><input id="dev-login" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" required>'
+    + '<label for="dev-pass">Пароль</label><input id="dev-pass" name="password" type="password" autocomplete="current-password" required>'
+    + '<button class="btn" type="submit">Открыть</button><p id="dev-lock-error" role="alert"></p>';
+  const out = document.createElement('button'); out.type = 'button'; out.id = 'dev-logout'; out.className = 'btn ghost sm'; out.textContent = 'Закрыть режим разработчика';
+  panel.prepend(box); panel.append(out);
+
+  function render() {
+    panel.classList.toggle('dev-locked', !unlocked);
+    box.hidden = unlocked; out.hidden = !unlocked;
+    const sw = $('dev-enabled'); if (sw) sw.disabled = !unlocked;
+    if (!unlocked) {
+      if (developerEnabled) { developerEnabled = false; if (UI.place?.developerOwner) UI.cancelPlace(); }
+      try { localStorage.setItem(DEV_PREFERENCE, '0'); } catch {}
+    }
+    if (typeof refreshDeveloperSettings === 'function') refreshDeveloperSettings();
+  }
+  async function digest(text) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)); return Array.from(new Uint8Array(b), v => v.toString(16).padStart(2, '0')).join(''); }
+  let tries = 0, waitUntil = 0;
+  box.addEventListener('submit', async e => {
+    e.preventDefault();
+    const err = $('dev-lock-error'), now = Date.now();
+    if (now < waitUntil) { err.textContent = 'Слишком много попыток. Подожди ' + Math.ceil((waitUntil - now) / 1000) + ' с.'; return; }
+    const login = $('dev-login').value.trim(), pass = $('dev-pass').value;
+    let ok = false; try { ok = (await digest('derzhava-dev|' + login + '|' + pass)) === HASH; } catch {}
+    $('dev-pass').value = '';
+    if (!ok) { tries++; if (tries >= 5) { waitUntil = Date.now() + 30000; tries = 0; } err.textContent = 'Неверный логин или пароль.'; return; }
+    err.textContent = ''; unlocked = true; try { sessionStorage.setItem(KEY, HASH); } catch {}
+    render(); $('dev-enabled')?.focus();
+  });
+  out.addEventListener('click', () => { unlocked = false; try { sessionStorage.removeItem(KEY); } catch {} render(); $('dev-login').focus(); });
+  render();
 })();
 </script>
 </body>
