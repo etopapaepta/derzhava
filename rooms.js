@@ -87,6 +87,7 @@ function nationOf(map,id){const n=map.nations.find(n=>n.id===id);rule(n,'Выб�
 function realm(nation,ai=false){
   return {nation:nation.id,name:nation.name,ai,alive:true,gold:15,food:18,people:7,hireAt:0,farmers:[]};
 }
+const reserved=(s,i)=>!!s.hostOnly&&i===1;
 function note(s,text){s.log.push(text);if(s.log.length>20)s.log.shift();}
 function province(owner=-1){return {owner,troops:owner<0?0:6,farm:owner>=0,mine:false,build:null,trainAt:0};}
 function createWorld(map,nation,seed=1){
@@ -161,7 +162,7 @@ function orderField(s,owner,a,map){
     const enemy=s.armies.find(q=>q.id===a.enemy&&q.owner!==owner);
     rule(enemy,'Выбери вражеский отряд.');x=enemy.x;z=enemy.z;goal={type:'attack',id:enemy.id};
   }else if(a.type==='capture'){
-    const i=a.province;rule(Number.isInteger(i)&&map.regions[i]&&s.provinces[i].owner!==owner&&!(s.hostOnly&&i>0&&i<map.capitals),'Выбери свободную или чужую территорию.');
+    const i=a.province;rule(Number.isInteger(i)&&map.regions[i]&&s.provinces[i].owner!==owner&&!reserved(s,i),'Выбери свободную или чужую территорию.');
     [x,z]=map.nav.rally[i];goal={type:'capture',province:i};
   }else{
     x=a.x;z=a.z;rule(terrainPlanner(map).isPass(x,z),'Укажи проходимую сушу.');goal={type:'move'};
@@ -184,7 +185,7 @@ function captureSite(s,q,i){
     loser.alive=false;loser.farmers=[];
     for(const v of s.provinces)if(v.owner===former){v.owner=q.owner;v.trainAt=0;v.build=null;delete v.drill;}
     note(s,winner.name+' занимает столицу державы «'+loser.name+'».');
-    const alive=s.players.flatMap((p,k)=>p.alive?[k]:[]);
+    const alive=s.players.flatMap((p,k)=>p.alive||p.pending?[k]:[]);
     if(alive.length===1||!s.players[0].alive&&!s.players[1].alive){s.stage='done';s.winner=alive.length===1?alive[0]:null;}
   }else if(q.owner<2||former===0||former===1)note(s,winner.name+' занимает территорию.');
   for(const b of s.sites||[])b.owner=s.provinces[b.province].owner;
@@ -218,7 +219,7 @@ function stepForces(s,map){
     q.path=[];q.pi=0;
     if(goal?.type==='move'){
       stand(q);
-      const i=map.nav.rally.findIndex(([x,z],i)=>s.provinces[i].owner!==q.owner&&!(s.hostOnly&&i>0&&i<map.capitals)&&Math.hypot(q.x-x,q.z-z)<12);
+      const i=map.nav.rally.findIndex(([x,z],i)=>s.provinces[i].owner!==q.owner&&!reserved(s,i)&&Math.hypot(q.x-x,q.z-z)<12);
       if(i>=0)q.goal={type:'capture',province:i};
     }
     if(q.goal?.type==='capture'){
@@ -253,15 +254,18 @@ function think(s,seat,map){
     let best=-1,score=Infinity;
     for(const i of candidates){
       const r=s.provinces[i];
-      if(r.owner===seat||goals.has(i))continue;
+      if(r.owner===seat||goals.has(i)||reserved(s,i))continue;
       // Neighbours expand into free land while the two players establish their cities.
-      if(r.owner>=0&&s.elapsed-s.fieldSince<(r.owner<2?900:190))continue;
+      if(r.owner>=0&&s.elapsed-s.fieldSince<(r.owner<2?900:480))continue;
       const [x,z]=map.nav.rally[i],d=Math.hypot(idle.x-x,idle.z-z)+(r.owner>=0?420:0);
       if(d<score){best=i;score=d;}
     }
     if(best>=0){orderField(s,seat,{type:'capture',unit:idle.id,province:best},map);return;}
   }
-  if(troops.length<3&&!base.trainAt&&p.gold>=9&&p.food>=6&&s.sites.some(b=>b.type==='barracks'&&b.owner===seat&&b.ready<=s.elapsed))recruit(s,seat,base,troops.length%2?'arch':'inf');
+  const fresh=troops.filter(q=>!q.equipped);
+  if(fresh.length&&p.arms>=4*fresh.length+2)orderField(s,seat,{type:'equip',units:fresh.slice(0,32).map(q=>q.id)},map);
+  const cap=Math.min(7,3+Math.floor(s.provinces.filter(r=>r.owner===seat).length/5));
+  if(troops.length<cap&&!base.trainAt&&p.gold>=9&&p.food>=6&&s.sites.some(b=>b.type==='barracks'&&b.owner===seat&&b.ready<=s.elapsed))recruit(s,seat,base,troops.length%2?'arch':'inf');
 }
 function installForces(s,map,now,fresh){
   const oldArmies=s.armies||[];s.armies=[];s.nextArmy=1;s.fieldSince=s.elapsed;s.v=3;
@@ -302,12 +306,29 @@ function simulationSecond(s,map){
   for(const [seat,p] of s.players.entries())if(p.alive&&p.ai&&s.elapsed>=p.thinkAt)think(s,seat,map);
 }
 // While any player is connected the clock advances continuously. A long empty session sleeps.
+function wakeRivals(s,map){
+  let woke=0;
+  for(let i=2;i<s.players.length;i++){
+    const p=s.players[i];if(!p?.pending)continue;
+    p.pending=false;p.alive=true;p.thinkAt=s.elapsed+8+i*2;woke++;
+    if(s.provinces[i].owner<0){s.provinces[i]=province(i);spawnField(s,i,'inf',8,i,map);}
+    else p.alive=false;
+  }
+  if(woke)note(s,'Соседние державы вступают в игру.');
+}
 function advanceWorld(s,map,now){
   if(s.stage!=='play')return 0;
+  if(s.hostOnly)wakeRivals(s,map);
   const raw=Math.floor((now-s.clockAt)/1000),steps=Math.max(0,Math.min(75,raw));if(!steps)return 0;
   for(let i=0;i<steps&&s.stage==='play';i++)simulationSecond(s,map);
   s.clockAt=raw>steps?now: s.clockAt+steps*1000;return steps;
 }
+const eraNeed=p=>p.cityEra===0?{gold:400,science:300,pop:35}:{gold:800,science:600,pop:60};
+function eraReady(p,map){
+  const discoveries=map.city.tech.filter(t=>t.era===p.cityEra&&p.tech.includes(t.id)).length;
+  return p.cityEra<2&&discoveries>=3&&p.pop>=eraNeed(p).pop;
+}
+function advanceEra(s,p){const req=eraNeed(p);cityPay(p,{gold:req.gold,science:req.science});p.cityEra++;note(s,p.name+' вступает в новую эпоху.');}
 function command(s,seat,a,map){
   rule(s.stage==='play','Партия сейчас не принимает приказы.',409);
   const p=s.players[seat];rule(p && seat<2 && p.alive,'Твоя столица перешла другой державе.',403);
@@ -319,10 +340,8 @@ function command(s,seat,a,map){
     p.study=t.id;return;
   }
   if(a.type==='advance'){
-    const req=p.cityEra===0?{gold:400,science:300,pop:35}:{gold:800,science:600,pop:60};
-    const discoveries=map.city.tech.filter(t=>t.era===p.cityEra&&p.tech.includes(t.id)).length;
-    rule(p.cityEra<2&&discoveries>=3&&p.pop>=req.pop,'Для новой эпохи нужны три открытия и достаточно жителей.');
-    cityPay(p,{gold:req.gold,science:req.science});p.cityEra++;note(s,p.name+' вступает в новую эпоху.');return;
+    rule(eraReady(p,map),'Для новой эпохи нужны три открытия и достаточно жителей.');
+    advanceEra(s,p);return;
   }
   if(['move','attack','capture','stop','equip'].includes(a.type)){orderField(s,seat,a,map);return;}
   const i=a.province,r=s.provinces[i];rule(Number.isInteger(i)&&r?.owner===seat,'Выбери собственную территорию.');
@@ -369,18 +388,24 @@ function migrateWorld(old,map,seed,now){
 function openKingdom(map,nation,seed,now){
   const s=createWorld(map,nation,seed),other=map.nations.find(n=>n.era===s.era&&n.id!==nation);
   startWorld(s,other.id,map,now);s.hostOnly=true;
-  for(let i=1;i<s.players.length;i++){s.players[i].alive=false;s.players[i].pending=true;s.provinces[i]=province();}
-  s.armies=s.armies.filter(q=>q.owner===0);s.log=[s.players[0].name+' основывает столицу.'];return s;
+  s.players[1].alive=false;s.players[1].pending=true;s.provinces[1]=province();
+  s.armies=s.armies.filter(q=>q.owner!==1);
+  s.log=[s.players[0].name+' основывает столицу. Соседние державы уже растут; место для друга ждёт его.'];return s;
 }
 function enterKingdom(s,nation,map,now){
   if(s.stage==='lobby'){startWorld(s,nation,map,now);return;}
   rule(s.hostOnly&&s.stage==='play','Оба места уже заняты.',409);
-  const other=createWorld(map,s.players[0].nation,s.seed);startWorld(other,nation,map,now);
-  for(let i=1;i<other.players.length;i++){
-    s.players[i]=other.players[i];if(i>1)s.players[i].thinkAt+=s.elapsed;
-    s.provinces[i]=other.provinces[i];spawnField(s,i,'inf',8,i,map);
+  const twin=s.players.find((p,i)=>i>1&&p.nation===nation);
+  if(twin){   // страну друга занимал ИИ — тот берёт другую свободную страну той же эпохи
+    const used=new Set(s.players.map(p=>p.nation)),spare=map.nations.find(n=>n.era===s.era&&!used.has(n.id)&&n.id!==nation);
+    rule(spare,'Эта страна уже есть на материке. Выбери другую.');
+    const old=twin.name;twin.nation=spare.id;twin.name=spare.name;note(s,old+' теперь зовётся «'+spare.name+'».');
   }
-  s.hostOnly=false;s.fieldSince=s.elapsed;note(s,s.players[1].name+' основывает столицу. На материке восемь держав.');
+  const other=createWorld(map,s.players[0].nation,s.seed);startWorld(other,nation,map,now);
+  s.players[1]=other.players[1];
+  s.provinces[1]=province(1);spawnField(s,1,'inf',8,1,map);
+  for(const b of s.sites)if(b.province===1)b.owner=1;
+  s.hostOnly=false;s.fieldSince=s.elapsed;note(s,s.players[1].name+' основывает столицу. На материке '+s.players.filter(p=>p.alive).length+' держав.');
 }
 const cityCache=new WeakMap();
 const CITY_RES=['food','wood','stone','metal','arms','gold','science'];
@@ -528,6 +553,8 @@ function cityTick(s,map){
 }
 function cityAI(s,map,seat){
   const p=s.players[seat],owned=s.sites.filter(b=>b.owner===seat),roles=p.farmers;
+  if(!p.study){const open=map.city.tech.filter(t=>t.era<=p.cityEra&&!p.tech.includes(t.id)),t=open.find(t=>t.era===p.cityEra)||open[0];if(t)p.study=t.id;}
+  if(eraReady(p,map)&&cityCanPay(p,{gold:eraNeed(p).gold+60,science:eraNeed(p).science})){advanceEra(s,p);return;}
   const queue=['farm','house','lumber','barracks','market','school','forge','quarry','mine','store'];
   const available=owned.find(b=>b.ready<=s.elapsed&&map.city.buildings[b.type].prod&&!roles.some(u=>u.site===b.id));
   if(available&&p.hireAt<=s.elapsed&&p.people>0){
