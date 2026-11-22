@@ -18883,6 +18883,7 @@ boot();
       ['Новые воины', 'Доспехи по эпохам: бронзовые кирасы и шлемы с гребнем в Античности, кольчуги с накидками в цвет державы в Средневековье, мундиры с киверами в Новое время. Новые мечи, копья, мушкеты со штыком и щиты с гербовым цветом.'],
       ['Конница и пушки', 'Рыцарские кони в попонах с золотой каймой, у конницы — сёдла и чепраки. Полевое орудие с колёсами на спицах.'],
       ['Новая техника', 'Переделаны РСЗО, военные дроны, ударные вертолёты, истребители и ПВО: больше деталей, вращающиеся винты.'],
+      ['Подвижная ПВО', 'Новая машина военной базы — «Зенитный комплекс ПВО». Её можно водить по карте, а вражеские самолёты, вертолёты, дроны и ракеты в радиусе 95 м она сбивает сама. Есть и в режиме разработчика, раздел «Техника».'],
       ['Москва-Сити', 'Деловой центр с башнями «Федерация», «Меркурий», «ОКО» и «Эволюция». Раздел «Город», с 1995 года, приносит золото.'],
       ['Город за меню', 'В главном меню теперь живой город: Спасская башня, храмы, рынок, кварталы, жители на улицах и дым из труб.'],
       ['Новости', 'Эта вкладка: здесь будет написано, что появилось в каждой версии.'],
@@ -18963,6 +18964,92 @@ boot();
 @media (orientation:landscape) and (max-height:540px){#harbor-news .news-list{max-height:62vh}}
 `;
   document.head.append(css);
+})();
+</script>
+<script id="pvo-js">
+// ===== 21_pvo.js =====
+// ---------- подвижная ПВО: «Зенитный комплекс» — машина военной базы. Её можно водить по карте, по самолётам, вертолётам,
+// дронам и ракетам врага в радиусе 95 м она стреляет сама. «Комплект ПВО» по-прежнему ставит неподвижную позицию. ----------
+(function () {
+  if (typeof FIELD_TYPES === 'undefined' || FIELD_TYPES.sam) return;
+  const RANGE = 95;
+  FIELD_TYPES.sam = { name: 'Зенитный комплекс ПВО', speed: 12, air: 0, reach: 0, power: 70, hp: 230, cost: { metal: 16, gold: 60 }, time: 13, model: 'fieldSam' };
+
+  MODELS.fieldSam = () => {
+    const g = new Geo(), olive = C(0x55623d), dark = C(0x262a24), steel = C(0x8d969a), glass = C(0x2c3c44), H = Math.PI / 2;
+    if (window.DerzhavaModels) DerzhavaModels.truck(g, olive, true);
+    else { g.box(0, .2, 0, 2.3, .9, 5.4, dark); g.box(0, 1.1, 1.8, 2.2, 1.0, 1.4, olive); }
+    g.box(0, .82, -1.1, 2.1, .5, 3.2, olive);                                        // кузов
+    g.cyl(0, 1.32, -1.15, .78, .7, .34, dark, { seg: 12 });                          // погон башни
+    g.grp(0, 1.66, -1.15, 0, () => {
+      g.box(0, 0, 0, 1.5, .48, 1.4, olive);
+      for (const s of [-1, 1]) {                                                    // пусковые контейнеры по два с каждой стороны
+        g.grp(s * .98, .55, -.1, 0, () => {
+          g.box(0, -.3, 0, .2, .7, .5, dark);
+          for (const dy of [0, .42]) {
+            g.cyl(s * .05, dy, -.9, .17, .17, 2.4, olive, { seg: 10, rx: H - .55, sm: 1 });
+            g.cyl(s * .05, dy + .62, .93, .15, .15, .05, steel, { seg: 10, rx: H - .55 });
+          }
+        });
+      }
+      g.cyl(0, .48, .45, .07, .07, 1.0, steel, { seg: 6 });                          // мачта и антенна радара
+      g.box(0, 1.5, .45, 1.6, .55, .08, steel, { rx: -.2 });
+      g.box(0, 1.5, .5, 1.4, .42, .04, glass, { rx: -.2 }, 2);
+      g.box(0, .3, .72, .5, .22, .04, glass, null, 2);
+    });
+    g.box(0, 1.0, -2.75, 1.9, .2, .1, C(0xd12a20), null, 2);                         // задние огни
+    return g.out();
+  };
+
+  // по наземным целям комплекс не стреляет — воздушные бьёт сам
+  const aim0 = aimFieldUnit;
+  aimFieldUnit = function (u, ref, ammo) {
+    if (u && u.kind === 'sam') return 'Зенитный комплекс сам сбивает вражескую авиацию и ракеты в радиусе ' + RANGE + ' м. Отведи его к тому, что нужно прикрыть.';
+    return aim0(u, ref, ammo);
+  };
+
+  const def0 = fieldDefence;
+  fieldDefence = function () {
+    const op = fieldOps(), due = G.t >= op.nextDefence;
+    def0();
+    if (!due) return;
+    for (const u of op.units) {
+      if (u.kind !== 'sam' || u.hp <= 0 || !G.states[u.owner]?.alive || (u.ready || 0) > G.t) continue;
+      const sh = op.shots.find(sh => ['salvo', 'airRocket', 'missile', 'specialRocket'].includes(sh.kind) && hostile(u.owner, sh.owner) && sh.age >= sh.duration * .35 && dist2(u.x, u.z, sh.x, sh.z) < RANGE * RANGE);
+      if (sh) { op.shots.splice(op.shots.indexOf(sh), 1); u.ready = G.t + 5; if (u.owner === G.player.id) toast('Зенитный комплекс перехватил ракету.', 'good'); continue; }
+      const t = op.units.find(o => o.hp > 0 && FIELD_TYPES[o.kind].air && hostile(o.owner, u.owner) && dist2(o.x, o.z, u.x, u.z) < RANGE * RANGE);
+      if (t) { u.ready = G.t + 3.5; u.yaw = Math.atan2(t.x - u.x, t.z - u.z); fieldShot(u, { kind: 'unit', id: t.id }, FIELD_TYPES.sam.power, 'guard', 3); }
+    }
+  };
+
+  // радиус прикрытия вокруг выбранного комплекса
+  const draw0 = drawFieldUnits;
+  drawFieldUnits = function () {
+    draw0();
+    const u = UI.fieldUnit != null && fieldOps().units.find(o => o.id === UI.fieldUnit && o.kind === 'sam');
+    if (u) R.ring(u.x, u.z, RANGE, .08, .45, .85, 1, .55);
+  };
+
+  // своя панель: без «ракетного удара», с радиусом и подсказкой
+  if (typeof fieldUnitPanel === 'function') {
+    const panel0 = fieldUnitPanel;
+    fieldUnitPanel = function (u) {
+      if (u.kind !== 'sam') return panel0(u);
+      const d = FIELD_TYPES.sam, wait = (u.ready || 0) > G.t;
+      return '<h2>' + d.name + ' №' + u.id + '</h2><p>Прочность ' + Math.ceil(u.hp) + ' из ' + d.hp + ' · ' + (u.pi < u.path.length ? 'В пути' : wait ? 'Перезаряжается' : 'Прикрывает район') + '</p><div class="row">' +
+        worksButton('move:' + u.id, 'Переместить') + worksButton('hold:' + u.id, 'Стоп') + '</div><p>Радиус ' + RANGE + ' м · урон ' + d.power + ' за пуск</p>' +
+        '<p class="sub">Сам сбивает вражеские самолёты, вертолёты, дроны и перехватывает ракеты в голубом круге. Поставь его рядом с тем, что нужно защитить.</p>' + worksButton('page:forces', 'Вся техника');
+    };
+  }
+  // подсказка после выдачи комплекта ПВО в режиме разработчика
+  if (typeof grantDeveloperItem === 'function') {
+    const grant0 = grantDeveloperItem;
+    grantDeveloperItem = function (group, key, n, siteId) {
+      const r = grant0(group, key, n, siteId);
+      if (r && !r.error && group === 'supply' && key === 'kit' && r.message) r.message += ' Комплект лежит на складе базы: открой военную базу и нажми «Разместить ПВО» — встанет неподвижная позиция. Подвижная ПВО — «Зенитный комплекс ПВО» в разделе «Техника».';
+      return r;
+    };
+  }
 })();
 </script>
 </body>
