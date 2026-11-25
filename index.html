@@ -19048,6 +19048,13 @@ boot();
 (function () {
   const nav = $('harbor-actions'), menu = nav && nav.parentElement; if (!nav || !menu) return;
   const NEWS = [
+    { v: '0.6', date: '25 ноября 2026', title: 'Законы войны', items: [
+      ['Удар по промышленности', 'На войне дроны, РСЗО, авиация и ракеты бьют по НПЗ, нефтяным вышкам, рудникам, электростанциям, заводам и военным базам. Компьютерные державы по мирным не стреляют.'],
+      ['Удар по мирным — теракт', 'Попадание по жилью, рынку, храму, школе или городу — теракт. Об этом узнают все: отношения с нападавшим рушатся, а соседи могут объявить ему войну.'],
+      ['ТЭС', 'Тепловая электростанция на нефти: даёт заводам 8 единиц мощности, но сжигает нефть. Без нефти встаёт и сама запускается, когда нефть появится.'],
+      ['Торговля нефтью и титаном', 'Соседи предлагают сделки: продать тебе излишки или купить у тебя. Принять или отказаться — в окошке слева. Между собой они тоже торгуют.'],
+      ['Соседи-промышленники', 'Компьютерные державы ставят вышки на всех своих месторождениях, строят НПЗ, ТЭС и рудники.'],
+    ] },
     { v: '0.5', date: '25 ноября 2026', title: 'Нефть и титан', items: [
       ['Нефть и титан', 'С 1900 года на карте видны нефтяные месторождения (чёрные лужи) и залежи титана (серебристые камни). Ставь у них нефтяные вышки и титановые рудники.'],
       ['НПЗ', 'Нефтеперерабатывающий завод превращает нефть в топливо и продаёт его — из нефти получается золото.'],
@@ -21661,13 +21668,14 @@ body.cine #tester-bar{visibility:hidden}
   const DEFS = {
     oilrig: { name: 'Нефтяная вышка', year: YEAR, jobs: 2, r: 6, hp: 420, time: 20, need: 'oil', cost: { wood: 40, stone: 30, metal: 30, gold: 60 }, desc: 'С 1900 года. Ставится у нефтяного месторождения — чёрных луж на карте. Добывает нефть: она нужна для РСЗО, ПВО, самолётов, дронов и ракет.' },
     refinery: { name: 'НПЗ', year: YEAR, watts: -2, jobs: 4, r: 11, hp: 900, time: 40, cost: { stone: 90, metal: 60, gold: 120 }, desc: 'Нефтеперерабатывающий завод. Перерабатывает нефть в топливо и продаёт его: из нефти получается золото.' },
+    thermalplant: { name: 'ТЭС', year: YEAR, watts: 8, jobs: 3, r: 10, hp: 850, time: 36, cost: { stone: 110, metal: 50, gold: 95 }, desc: 'Тепловая электростанция на нефти: даёт до 8 единиц мощности заводам, но сжигает нефть. Без нефти встаёт.' },
     titanmine: { name: 'Титановый рудник', year: YEAR, jobs: 3, r: 7, hp: 500, time: 26, need: 'titan', cost: { wood: 50, stone: 40, gold: 70 }, desc: 'С 1900 года. Ставится у залежи титана — серебристых камней. Титан — особый металл для ракет, РСЗО, ПВО и самолётов.' },
   };
   for (const [type, d] of Object.entries(DEFS)) {
     INDUSTRY[type] = BDEF[type] = d; BHT[type] = type === 'refinery' ? 14 : 9; SCAF[type] = [0, 0, Math.min(7, d.r * .7), 6];
-    CLSOF[type] = 'work'; JOBN[type] = type === 'refinery' ? 'нефтепереработчик' : type === 'oilrig' ? 'нефтяник' : 'горняк';
+    CLSOF[type] = 'work'; JOBN[type] = type === 'refinery' ? 'нефтепереработчик' : type === 'oilrig' ? 'нефтяник' : type === 'thermalplant' ? 'энергетик' : 'горняк';
   }
-  const cat = BCATS.find(c => c[0] === 'Промышленность'); if (cat) cat[1].push('oilrig', 'refinery', 'titanmine');
+  const cat = BCATS.find(c => c[0] === 'Промышленность'); if (cat) cat[1].push('oilrig', 'refinery', 'thermalplant', 'titanmine');
 
   // место у залежи
   const place0 = canPlace;
@@ -21700,9 +21708,10 @@ body.cine #tester-bar{visibility:hidden}
   }
   // залежи видны с 1900 года (в режиме тестера и при открытом режиме разработчика — сразу)
   const visible = () => G.started && G.player && (open(G.player) || (G.travel && G.travel.tester));
-  const dl0 = drawLandmarks;
+  const dl0 = drawLandmarks; let smokeT = 0;
   drawLandmarks = function () {
     dl0();
+    if (G.started && (smokeT -= 1 / 60) <= 0) { smokeT = .25; for (const b of G.buildings) if (b.type === 'thermalplant' && b.done && !b.dry && inView(b.x, b.y + 12, b.z, 20)) { const c = Math.cos(b.rot), sn = Math.sin(b.rot); for (const lx of [-4.5, -1.5]) { const lz = -3.6; spawnPart(b.x + lx * c + lz * sn, b.y + 15.6, b.z - lx * sn + lz * c, .3, 1.2, .1, 4, 1.6, 1.6, [.78, .77, .75], .35); } } }
     if (!visible() && !(typeof developerEnabled !== 'undefined' && developerEnabled)) return;
     for (const d of W.deposits) {
       if (!d.modern || !inView(d.x, d.y + 1, d.z, 12)) continue;
@@ -21776,6 +21785,18 @@ body.cine #tester-bar{visibility:hidden}
     g.cyl(7.6, 11.2, 6.8, .5, .02, 1.6, fire, { seg: 8 }, 3); g.cyl(7.6, 11.2, 6.8, .25, .01, 2.2, C(0xffe3a0), { seg: 6 }, 3);
     g.box(-6.5, .2, 6.5, 3, 2.4, 2.2, C(0x8f8a7d)); g.box(-6.5, 1.3, 7.62, 2.4, .5, .04, C(0x2f4652), null, 2);   // управление
   };
+  // ТЭС: главный корпус, две трубы с красно-белыми поясами, градирня, резервуар мазута
+  BGEN.thermalplant = function (g) {
+    g.box(0, 0, 0, 18, .2, 18, concreteC);
+    g.box(-2, .2, -2, 8, 5, 6, C(0x9a8f80)); g.box(-2, 5.2, -2, 8.4, .3, 6.4, C(0x5d5248));
+    for (let i = 0; i < 5; i++) g.box(-5 + i * 1.6, 2.4, 1.02, 1.1, 1.6, .05, C(0x2f4652), null, 2);
+    for (const x of [-4.5, -1.5]) { g.cyl(x, 5.2, -3.6, .7, .5, 10, C(0xd9d4c8), { seg: 12 }); for (const y of [7, 9.5, 12, 14.5]) g.cyl(x, 5.2 + y - 5, -3.6, .62 - (y - 5) * .012, .6 - (y - 5) * .012, .9, C(0xb33a2d), { seg: 12, noTop: 1, noBottom: 1 }); }
+    g.cyl(5, .2, -2.5, 3.6, 2.4, 4.5, C(0xc9c4b6), { seg: 18, sm: 1, noTop: 1 }); g.cyl(5, 4.7, -2.5, 2.4, 2.9, 3, C(0xc9c4b6), { seg: 18, sm: 1, noTop: 1 });   // градирня
+    g.cyl(5, 7.6, -2.5, 2.7, 2.7, .1, C(0x6f6a60), { seg: 18 });
+    g.cyl(-5, .2, 5, 2, 2, 2.4, white, { seg: 16, sm: 1 }); g.cyl(-5, 1.4, 5, 2.02, 2.02, .3, WH, { seg: 16, noTop: 1, noBottom: 1 }, 1);
+    g.box(3, .2, 5, 4, 2.2, 3, C(0x7c8288)); for (let i = 0; i < 3; i++) g.box(1.6 + i * 1.4, 2.4, 5, .12, 2, .12, steelC);   // трансформаторы
+  };
+  MODELS.thermalSmoke = null;
   // титановый рудник: копёр с колесом, надшахтное здание, транспортёр, отвал руды
   BGEN.titanmine = function (g) {
     g.box(0, 0, 0, 12, .2, 12, concreteC);
@@ -21801,6 +21822,13 @@ body.cine #tester-bar{visibility:hidden}
       if (s.bandit || !s.alive) continue; ensure(s);
       const cap = Math.max(200, s.cap || 0), grid = typeof gridPower === 'function' ? gridPower(s).factor : 1;
       for (const b of s.buildings) {
+        if (b.type === 'thermalplant' && b.done && (!b.off || b.autoOff)) {   // ТЭС без нефти гаснет сама и сама загорается, когда нефть появилась
+          const crewT = Math.min(1, (b.w || 0) / 3), use = Math.min(s.res.oil, .25 * (s.isPlayer ? Math.max(.3, crewT) : 1) * sec);
+          s.res.oil -= use; const dry = use < .02 * sec;
+          if (dry && !b.off) { b.off = true; b.autoOff = true; b.dry = true; if (s.isPlayer) toast('ТЭС остановилась: нет нефти', 'bad'); }
+          else if (!dry && b.autoOff) { b.off = false; b.autoOff = false; b.dry = false; }
+          continue;
+        }
         if (!b.done || b.off) continue;
         const d = DEFS[b.type]; if (!d) continue;
         const crew = d.jobs ? Math.min(1, (b.w || 0) / d.jobs) : 1, k = s.isPlayer ? 1 : .8 + .4 * crew;   // соседи работают и без полного штата
@@ -21850,12 +21878,14 @@ body.cine #tester-bar{visibility:hidden}
     return true;
   }
   function aiBuild(s, type) {
-    if (s.buildings.some(b => b.type === type)) return false;
+    const have = s.buildings.filter(b => b.type === type).length, need = BDEF[type].need;
+    const want = need ? Math.min(4, W.deposits.filter(d => d.kind === need && W.regions[regionAt(d.x, d.z)]?.owner === s.id && !s.buildings.some(b => b.type === type && dist2(b.x, b.z, d.x, d.z) < 26 * 26)).length + have) : 1;
+    if (have >= want) return false;
     const cost = costOf(s, type); if (!canAfford(s, cost)) return false;
     let p = null;
     if (BDEF[type].need === 'oil' || BDEF[type].need === 'titan') {
       for (const d of W.deposits) {
-        if (d.kind !== BDEF[type].need || W.regions[regionAt(d.x, d.z)]?.owner !== s.id) continue;
+        if (d.kind !== BDEF[type].need || W.regions[regionAt(d.x, d.z)]?.owner !== s.id || s.buildings.some(b => b.type === type && dist2(b.x, b.z, d.x, d.z) < 26 * 26)) continue;
         p = spotNear(s, type, d.x, d.z, 10, 20); if (p) break;
       }
     } else p = spotNear(s, type, s.capital.x, s.capital.z, 34, 110);
@@ -21874,14 +21904,21 @@ body.cine #tester-bar{visibility:hidden}
       if (!da.jobs.length && (stock.specialRocket || 0) < 2 && modernEraOk(s, 1945)) { if (aiBuy(s, FIELD_SUPPLIES.specialRocket.cost)) fieldOrder(s, arsenal, 'specialRocket'); }
     }
   }
+  const CIVIL = new Set(['house', 'market', 'emporium', 'school', 'church', 'temple', 'shrine', 'manor', 'center', 'farm', 'store', 'trade', 'airport', 'moscowcity', 'port', 'stable']);
+  const PRIORITY = ['refinery', 'oilrig', 'thermalplant', 'atomplant', 'hydroplant', 'windplant', 'titanmine', 'steelfactory', 'machinefactory', 'sawfactory', 'arsenal', 'milbase', 'airdef', 'barracks', 'forge', 'castle', 'tower', 'outpost', 'mine', 'quarry', 'lumber'];
+  MD.CIVIL = CIVIL; MD.PRIORITY = PRIORITY;
+  function industryTarget(s, o) {   // лучшая не-мирная цель державы o для удара державы s
+    const L = o.buildings.filter(b => b.done && b.hp > 0 && !CIVIL.has(b.type) && PRIORITY.includes(b.type));
+    if (!L.length) return null;
+    L.sort((a, b) => (PRIORITY.indexOf(a.type) - PRIORITY.indexOf(b.type)) || dist2(a.x, a.z, s.capital.x, s.capital.z) - dist2(b.x, b.z, s.capital.x, s.capital.z));
+    return L[0];
+  }
+  MD.industryTarget = industryTarget;
   function enemyTarget(s) {
-    const foes = G.states.filter(o => o !== s && o.alive && !o.bandit && o.capital && hostile(s.id, o.id));
-    if (!foes.length) return null;
-    const o = foes.sort((a, b) => dist2(a.capital.x, a.capital.z, s.capital.x, s.capital.z) - dist2(b.capital.x, b.capital.z, s.capital.x, s.capital.z))[0];
-    const pri = ['milbase', 'airdef', 'arsenal', 'barracks', 'refinery', 'castle', 'center'];
-    const L = o.buildings.filter(b => b.done && b.hp > 0);
-    L.sort((a, b) => ((pri.indexOf(a.type) + 1 || 9) - (pri.indexOf(b.type) + 1 || 9)) || dist2(a.x, a.z, s.capital.x, s.capital.z) - dist2(b.x, b.z, s.capital.x, s.capital.z));
-    return { o, b: L[0] || o.capital };
+    const foes = G.states.filter(o => o !== s && o.alive && !o.bandit && o.capital && hostile(s.id, o.id))
+      .sort((a, b) => dist2(a.capital.x, a.capital.z, s.capital.x, s.capital.z) - dist2(b.capital.x, b.capital.z, s.capital.x, s.capital.z));
+    for (const o of foes) { const b = industryTarget(s, o); if (b) return { o, b }; }
+    return foes.length ? { o: foes[0], b: null } : null;
   }
   function news(text, bad) { MD.log.unshift(text); if (MD.log.length > 20) MD.log.pop(); try { toast(text, bad ? 'bad' : ''); } catch { } }
   let aiT = 0;
@@ -21894,7 +21931,8 @@ body.cine #tester-bar{visibility:hidden}
       ensure(s);
       // экономика: нефть, титан, база, арсенал, НПЗ
       if (s.res.gold > 260 && (s.res.oil < 25 || s.res.titan < 25)) aiBuy(s, { oil: 30, titan: 30 });
-      for (const t of ['milbase', 'oilrig', 'titanmine', 'refinery', 'arsenal']) if (aiBuild(s, t)) break;
+      const oilOk = s.buildings.some(b => b.type === 'oilrig') || s.res.oil > 60;
+      for (const t of ['milbase', 'oilrig', 'refinery', 'titanmine', 'thermalplant', 'arsenal', 'oilrig']) if ((oilOk || (t !== 'refinery' && t !== 'thermalplant')) && aiBuild(s, t)) break;
       const base = s.buildings.find(b => b.type === 'milbase' && b.done), arsenal = s.buildings.find(b => b.type === 'arsenal' && b.done);
       if (base) aiProduce(s, base, arsenal);
       // война: дроны стаей, техника, ракеты с базы, в затяжной войне — ядерный удар
@@ -21902,6 +21940,7 @@ body.cine #tester-bar{visibility:hidden}
       if (!T) { A.war = 0; }
       else {
         if (!A.war) A.war = G.t;
+        if (!T.b) { A.next = G.t + 6; continue; }
         const ref = { kind: 'building', id: T.b.id }, idle = fieldOps().units.filter(u => u.owner === s.id && u.hp > 0 && !u.target && u.kind !== 'sam');
         const drones = idle.filter(u => u.kind === 'drone');
         if (drones.length >= 3 && G.t > A.drones) { for (const u of drones) aimFieldUnit(u, ref); A.drones = G.t + 25; if (T.o.isPlayer) news('«' + s.nation.name + '» запустила рой дронов: ' + drones.length + ' шт.', true); }
@@ -21909,7 +21948,7 @@ body.cine #tester-bar{visibility:hidden}
         const stock = ammoOf(s.id);
         if (base && stock.missile > 0 && G.t > A.miss) { if (!launchFromBase(base, 'missile', ref)) { A.miss = G.t + 30; if (T.o.isPlayer) news('«' + s.nation.name + '» нанесла ракетный удар', true); } }
         if (base && stock.specialRocket > 0 && G.t > A.nuke && G.t - A.war > 600 && Math.random() < .12) {
-          if (!launchFromBase(base, 'specialRocket', { kind: 'building', id: T.o.capital.id })) { A.nuke = G.t + 600; news('☢ «' + s.nation.name + '» нанесла ЯДЕРНЫЙ удар по «' + T.o.nation.name + '»!', true); }
+          if (!launchFromBase(base, 'specialRocket', ref)) { A.nuke = G.t + 600; news('☢ «' + s.nation.name + '» нанесла ЯДЕРНЫЙ удар по «' + T.o.nation.name + '»!', true); }
         }
       }
       // объявить войну соседу, если давно ни с кем не воюет
@@ -21924,6 +21963,140 @@ body.cine #tester-bar{visibility:hidden}
     }
   }
   MD.aiStep = aiStep; MD.addDeposits = addDeposits;
+})();
+</script>
+<script id="tradewar-js">
+// ===== 32_tradewar.js =====
+// ---------- Торговля и законы войны после 1900 года.
+// Соседи предлагают сделки по нефти и титану: продать излишки или купить у тебя. Между собой они тоже торгуют.
+// На войне удары техникой и ракетами идут по промышленности и военным объектам. Удар по мирным постройкам —
+// жилью, рынкам, храмам, городу — это теракт: о нём узнают все, отношения с нападавшим рушатся, и соседи могут
+// объявить ему войну. Компьютерные державы мирные цели не выбирают. ----------
+(function () {
+  if (typeof applyFieldHit !== 'function' || !window.MODERN || window.TRADEWAR) return;
+  const MD = window.MODERN, TW = window.TRADEWAR = { offer: null, terror: [] };
+  const open = s => !!s && !s.bandit && modernEraOk(s, MD.year);
+  const nm = s => s.nation.name;
+  const PRICE = { oil: 5, titan: 8 };
+
+  // ---------- компьютер не стреляет по мирным: такую цель меняет на промышленность или военный объект ----------
+  const aim0 = aimFieldUnit;
+  aimFieldUnit = function (u, ref, ammo) {
+    if (u && ref && ref.kind === 'building' && !G.states[u.owner]?.isPlayer) {
+      const b = G.buildings.find(x => x.id === ref.id);
+      if (b && MD.CIVIL.has(b.type)) {
+        const t = MD.industryTarget(G.states[u.owner], G.states[b.owner]);
+        if (!t) return 'Мирные цели компьютер не бьёт.';
+        ref = { kind: 'building', id: t.id };
+      }
+    }
+    return aim0.call(this, u, ref, ammo);
+  };
+  const launch0 = launchFromBase;
+  launchFromBase = function (b, key, ref) {
+    const s = b && G.states[b.owner];
+    if (s && !s.isPlayer && ref && ref.kind === 'building') {
+      const t = G.buildings.find(x => x.id === ref.id);
+      if (t && MD.CIVIL.has(t.type)) { const alt = MD.industryTarget(s, G.states[t.owner]); if (!alt) return 'Мирные цели компьютер не бьёт.'; ref = { kind: 'building', id: alt.id }; }
+    }
+    return launch0.call(this, b, key, ref);
+  };
+
+  // ---------- теракт: прямое попадание по мирной постройке ----------
+  const hit0 = applyFieldHit;
+  applyFieldHit = function (sh) {
+    try {
+      const t = sh && sh.ref && sh.ref.kind === 'building' && fieldTarget(sh.ref);
+      if (t && MD.CIVIL.has(t.type) && sh.kind !== 'guard') terror(G.states[sh.owner], G.states[t.owner], t, sh.kind);
+    } catch (e) { console.warn('terror', e); }
+    return hit0.apply(this, arguments);
+  };
+  function terror(a, v, b, kind) {
+    if (!a || !v || a === v || a.bandit) return;
+    a.terrT = a.terrT || -1e9; if (G.t - a.terrT < 20) return; a.terrT = G.t;
+    a.terror = (a.terror || 0) + 1;
+    const what = (typeof bName === 'function' ? bName(b.type, v.era, v) : b.type).toLowerCase(), how = kind === 'specialRocket' || kind === 'specialBomb' ? 'ядерным оружием' : kind === 'salvo' ? 'из РСЗО' : kind === 'drone' ? 'дроном' : kind === 'missile' ? 'ракетой' : 'с воздуха';
+    const text = 'ТЕРАКТ: «' + nm(a) + '» ударила ' + how + ' по мирным — ' + what + ' державы «' + nm(v) + '».';
+    TW.terror.unshift({ t: G.t, a: a.id, v: v.id, text }); if (TW.terror.length > 30) TW.terror.pop();
+    toast(text + (a.isPlayer ? ' Соседи этого не простят.' : ''), 'bad');
+    if (typeof chron === 'function') try { chron(v, 'теракт: удар по мирным от «' + nm(a) + '»'); } catch { }
+    // последствия: все отворачиваются от нападавшего, самые возмущённые объявляют ему войну
+    for (const o of G.states) {
+      if (o === a || o.bandit || !o.alive || !o.capital) continue;
+      if (a.isPlayer) { addRel(o, -14); if (o !== v && !o.isPlayer && (o.rel || 0) < -45 && !hostile(o.id, a.id) && Math.random() < .35) { setWar(o.id, a.id, true); toast('«' + nm(o) + '» объявила тебе войну из-за теракта', 'bad'); } }
+      else if (!o.isPlayer && o !== v && !hostile(o.id, a.id) && Math.random() < .2 + .1 * Math.min(3, a.terror)) { setWar(o.id, a.id, true); toast('«' + nm(o) + '» объявила войну «' + nm(a) + '» из-за теракта', ''); }
+    }
+  }
+
+  // ---------- торговля: предложения игроку и сделки между соседями ----------
+  const card = document.createElement('div'); card.id = 'trade-offer'; card.hidden = true; document.body.append(card);
+  card.addEventListener('click', e => { const b = e.target.closest('[data-tw]'); if (!b) return; if (b.dataset.tw === 'yes') accept(); else decline(); });
+  function show(o) {
+    TW.offer = o;
+    const verb = o.dir === 'sell' ? 'предлагает продать тебе' : 'хочет купить у тебя', res = RNAME[o.k];
+    card.innerHTML = '<div class="tw-head"><i style="background:' + o.s.css + '"></i><b>' + esc(nm(o.s)) + '</b><span>торговое предложение</span></div>'
+      + '<p>' + esc(nm(o.s)) + ' ' + verb + ' <b>' + o.n + ' ' + res + '</b> за <b>' + o.gold + ' зол.</b></p>'
+      + '<p class="tw-note">' + (o.dir === 'sell' ? 'На бирже это стоило бы ' + Math.round(o.n * PRICE[o.k] * 1.25) + ' зол.' : 'Цена выше биржевой — им очень нужно.') + '</p>'
+      + '<div class="tw-row"><button data-tw="yes">Принять</button><button data-tw="no" class="tw-no">Отказаться</button></div>';
+    card.hidden = false;
+  }
+  function hide() { card.hidden = true; TW.offer = null; }
+  function accept() {
+    const o = TW.offer, p = G.player; if (!o) return hide();
+    if (!o.s.alive || hostile(o.s.id, p.id)) { toast('Сделка сорвалась', 'bad'); return hide(); }
+    if (o.dir === 'sell') {
+      if (p.res.gold < o.gold) { toast('Не хватает золота', 'bad'); return; }
+      if (o.s.res[o.k] < o.n) { toast('У них уже нет столько ' + RNAME[o.k], 'bad'); return hide(); }
+      p.res.gold -= o.gold; o.s.res.gold += o.gold; p.res[o.k] = (p.res[o.k] || 0) + o.n; o.s.res[o.k] -= o.n;
+    } else {
+      if ((p.res[o.k] || 0) < o.n) { toast('У тебя нет столько ' + RNAME[o.k], 'bad'); return; }
+      p.res[o.k] -= o.n; o.s.res[o.k] = (o.s.res[o.k] || 0) + o.n; p.res.gold += o.gold; o.s.res.gold = Math.max(0, o.s.res.gold - o.gold);
+    }
+    addRel(o.s, 5); toast('Сделка с «' + nm(o.s) + '» заключена', 'good'); hide(); UI.refresh();
+  }
+  function decline() { const o = TW.offer; if (o) addRel(o.s, -1); hide(); }
+
+  let next = 0;
+  function tradeTick() {
+    if (!G.started || G.over || (typeof DUEL !== 'undefined' && DUEL.mapOn)) return;
+    if (TW.offer && G.t > TW.offer.until) hide();
+    if (G.t < next) return; next = G.t + 70 + Math.random() * 60;
+    const p = G.player, partners = G.states.filter(o => o.alive && !o.bandit && !o.isPlayer && o.capital && open(o));
+    // соседи между собой: у кого избыток — продаёт тому, у кого нехватка
+    for (const k of ['oil', 'titan']) {
+      const sellers = partners.filter(o => (o.res[k] || 0) > 90), buyers = partners.filter(o => (o.res[k] || 0) < 15 && o.res.gold > 200);
+      for (const b of buyers) { const s = sellers.find(o => o !== b && !hostile(o.id, b.id)); if (!s) continue; const n = 40, g = Math.round(n * PRICE[k]); s.res[k] -= n; b.res[k] = (b.res[k] || 0) + n; b.res.gold -= g; s.res.gold += g; }
+    }
+    if (!p || !open(p) || TW.offer) return;
+    // предложение игроку
+    const friends = partners.filter(o => !hostile(o.id, p.id));
+    const L = [];
+    for (const o of friends) for (const k of ['oil', 'titan']) {
+      const n = 30 + 10 * Math.floor(Math.random() * 4);
+      if ((o.res[k] || 0) > 70 && p.res.gold > n * PRICE[k]) L.push({ s: o, k, n, dir: 'sell', gold: Math.round(n * PRICE[k] * (.85 + Math.random() * .2) * (1 - Math.max(-20, Math.min(30, o.rel || 0)) / 200)) });
+      if ((o.res[k] || 0) < 20 && (p.res[k] || 0) >= n + 10 && o.res.gold > n * PRICE[k] * 1.6) L.push({ s: o, k, n, dir: 'buy', gold: Math.round(n * PRICE[k] * (1.3 + Math.random() * .3)) });
+    }
+    if (!L.length) return;
+    const o = L[Math.floor(Math.random() * L.length)]; o.until = G.t + 45; show(o);
+  }
+  const step0 = simStep;
+  simStep = function () { const r = step0.apply(this, arguments); try { tradeTick(); } catch (e) { console.warn('trade', e); } return r; };
+
+  const css = document.createElement('style'); css.id = 'tradewar-css';
+  css.textContent = `
+#trade-offer{position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 110px);z-index:7;width:min(300px,calc(100vw - 24px));padding:12px 14px;border-radius:12px;background:var(--panel);color:var(--ink);border:1px solid var(--brass);box-shadow:0 10px 30px rgba(0,0,0,.35);font:14px/1.4 var(--ui)}
+#trade-offer[hidden]{display:none}
+#trade-offer .tw-head{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+#trade-offer .tw-head i{width:11px;height:11px;border-radius:50%;border:1px solid rgba(255,255,255,.5)}
+#trade-offer .tw-head span{margin-left:auto;color:var(--mut);font-size:12px}
+#trade-offer p{margin:0 0 6px}#trade-offer .tw-note{color:var(--mut);font-size:12.5px}
+#trade-offer .tw-row{display:flex;gap:8px}#trade-offer button{flex:1;min-height:38px;border-radius:8px;border:1px solid var(--line);background:var(--btn);color:var(--btnink);font:600 14px var(--ui);cursor:pointer}
+#trade-offer .tw-no{background:var(--card);color:var(--ink)}
+body.cine #trade-offer{visibility:hidden}
+@media (max-width:560px){#trade-offer{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 150px)}}
+`;
+  document.head.append(css);
+  TW.terrorFn = terror; TW.tick = tradeTick; TW.show = show;
 })();
 </script>
 </body></html>
