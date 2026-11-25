@@ -6004,7 +6004,7 @@ function aiBuild(s, A) {
   let type=planned==='tower'&&emporiumUnlocked(s)&&s.buildings.some(b=>b.type==='market'&&b.done)&&
     !s.buildings.some(b=>b.type==='emporium')&&canAfford(s,costOf(s,'emporium'))?'emporium':planned;
   if(type==='tower'&&modernEraOk(s,1801)&&s.buildings.some(b=>b.type==='market'&&b.done)){
-    const candidate=['windplant','machinefactory',...(modernEraOk(s,1951)?['milbase']:[])].find(k=>!s.buildings.some(b=>b.type===k)&&canAfford(s,costOf(s,k)));
+    const candidate=['windplant','machinefactory',...(modernEraOk(s,1900)?['milbase']:[])].find(k=>!s.buildings.some(b=>b.type===k)&&canAfford(s,costOf(s,k)));
     if(candidate)type=candidate;
   }
   if (FAITHB[type] && s.buildings.some(b => b.type === type)) { A.step++; return; }   // святилище и храм — по одному
@@ -16388,7 +16388,7 @@ function craftAction(a){
 const beforeStudioBuildingPanel=UI.selHtml;
 UI.selHtml=function(b){
   let h=beforeStudioBuildingPanel.call(UI,b);
-  if(b.type==='milbase'&&b.done&&b.owner===G.player.id&&modernEraOk(G.player,1951))h=h.replace('</p>','</p>'+worksButton('production:'+b.id,'Производство техники и ПВО'));
+  if(b.type==='milbase'&&b.done&&b.owner===G.player.id&&modernEraOk(G.player,1900))h=h.replace('</p>','</p>'+worksButton('production:'+b.id,'Производство техники и ПВО'));
   h+=modernBuildingPanel(b);
   return b.done&&b.owner===G.player.id&&!G.states[b.owner].bandit?h+'<div class="row"><button class="btn ghost" data-act="craft:studio:'+b.id+'">Облик здания</button></div>':h;
 };
@@ -16807,8 +16807,8 @@ function drawCapital(g,id,design) {
 }
 
 
-const EMPORIUM_UNLOCK='Торговый центр открывается в эпоху «Новое время».';
-const emporiumUnlocked=s=>!!s&&!s.bandit&&s.era>=2;
+const EMPORIUM_UNLOCK='Торговый центр открывается с 1900 года. До этого торгуют на рынке.';
+const emporiumUnlocked=s=>!!s&&!s.bandit&&s.era>=2&&modernEraOk(s,1900);
 BDEF.emporium={
   name:'Торговый центр',r:11,hp:820,time:34,cost:{wood:85,stone:95,metal:15,gold:70},
   jobs:5,prod:{gold:.95},
@@ -17008,8 +17008,8 @@ const INDUSTRY={
   sawfactory:{name:'Деревообрабатывающий завод',year:1801,watts:-2,jobs:3,r:9,hp:660,time:28,need:'trees',cost:{wood:70,stone:50,metal:20,gold:30},prod:{wood:1.55},desc:'Работает у леса. Производит дерево и потребляет до 2 единиц мощности.'},
   steelfactory:{name:'Металлургический завод',year:1801,watts:-3,jobs:4,r:9,hp:790,time:34,need:'iron',cost:{wood:65,stone:75,metal:20,gold:50},use:{wood:.22},prod:{metal:1.15},desc:'У железного месторождения перерабатывает руду в металл. Нужны дерево и до 3 единиц мощности.'},
   machinefactory:{name:'Машиностроительный завод',year:1801,watts:-4,jobs:4,r:10,hp:810,time:37,cost:{wood:50,stone:85,metal:40,gold:70},use:{metal:.35},prod:{arms:.70,gold:.32},desc:'Перерабатывает металл в снаряжение и приносит золото. Потребляет до 4 единиц мощности.'},
-  arsenal:{name:'Арсенал',year:1951,jobs:0,r:10,hp:880,time:39,cost:{wood:60,stone:85,metal:55,gold:95},desc:'Отдельно выпускает авиабомбы и особые боеприпасы. Готовые запасы доступны базам и самолётам державы.'},
-  airdef:{name:'Позиция ПВО',year:1951,jobs:0,r:5.6,hp:540,time:5,cost:{},desc:'Стационарный игровой отряд. Защищает ближайшие здания от вражеских воздушных юнитов и ракет. Комплект выпускает военная база.'}
+  arsenal:{name:'Арсенал',year:1900,jobs:0,r:10,hp:880,time:39,cost:{wood:60,stone:85,metal:55,gold:95},desc:'Отдельно выпускает авиабомбы и особые боеприпасы. Готовые запасы доступны базам и самолётам державы.'},
+  airdef:{name:'Позиция ПВО',year:1900,jobs:0,r:5.6,hp:540,time:5,cost:{},desc:'Стационарный игровой отряд. Защищает ближайшие здания от вражеских воздушных юнитов и ракет. Комплект выпускает военная база.'}
 };
 for(const [type,d] of Object.entries(INDUSTRY)){
   BDEF[type]=d;BHT[type]=type==='windplant'?12:8;SCAF[type]=[0,0,Math.min(7,d.r*.7),6];
@@ -17133,7 +17133,7 @@ function defenceKitBase(s){
 function fieldIssue(s,b,kind){
   const d=FIELD_TYPES[kind]||FIELD_SUPPLIES[kind];
   if(!s?.alive||G.over||!d||!isLive(b)||!b.done||b.owner!==s.id||b.type!==(d.site||'milbase'))return 'Производство здесь недоступно.';
-  if(!modernEraOk(s,1951))return 'Современная техника открывается с 1951 года.';
+  if(!modernEraOk(s,1900))return 'Современная техника открывается с 1900 года.';
   if(depotOf(b).jobs.length>=4)return 'Очередь заполнена.';
   if(!canAfford(s,d.cost))return 'Не хватает ресурсов.';
   return '';
@@ -17203,7 +17203,7 @@ function fieldShot(source,ref,damage,kind,air=0){
   fieldOps().shots.push({owner:fieldOwner(source),fromX:source.x,fromZ:source.z,x:o.x,z:o.z,air,ref:{...ref},kind,damage,age:0,duration:Math.max(.7,Math.min(9,len/65))});
 }
 function launchFromBase(b,key,ref){
-  if(!isLive(b)||!b.done||b.type!=='milbase'||!modernEraOk(G.states[b.owner],1951)||!['missile','specialRocket'].includes(key))return 'Нужна готовая военная база.';
+  if(!isLive(b)||!b.done||b.type!=='milbase'||!modernEraOk(G.states[b.owner],1900)||!['missile','specialRocket'].includes(key))return 'Нужна готовая военная база.';
   const stock=ammoOf(b.owner),depot=depotOf(b),target=fieldTarget(ref);
   if(!target||!hostile(b.owner,fieldOwner(target)))return 'Выбери цель воюющей с тобой страны.';
   if(!(stock[key]>0))return 'Сначала заверши производство боеприпаса.';
@@ -17364,7 +17364,7 @@ function fieldDefence(){
 function fieldAI(){
   const op=fieldOps();if(G.t<op.nextAI)return;op.nextAI=G.t+21;
   for(const s of G.states){
-    if(s.bandit||!s.alive||s.isPlayer||!modernEraOk(s,1951))continue;
+    if(s.bandit||!s.alive||s.isPlayer||!modernEraOk(s,1900))continue;
     const base=s.buildings.find(b=>b.type==='milbase'&&b.done);if(!base)continue;
     const ours=op.units.filter(u=>u.owner===s.id),dep=depotOf(base);
     if(!dep.jobs.length&&ours.length<2&&s.res.gold>140)fieldOrder(s,base,ours.length?'launcher':'drone');
@@ -17444,7 +17444,7 @@ function worksDesk(s){
 function fieldDepotPanel(b){
   const s=G.states[b.owner],base=b.type==='milbase',dep=depotOf(b),stock=ammoOf(s.id);
   let h='<section class="works-desk"><h3>'+(base?'Техника и ракетный пост':'Производство боеприпасов')+'</h3>';
-  if(!modernEraOk(s,1951))return h+'<p class="sub">Доступно с 1951 года. В испытании построек выбери Новое время, чтобы проверить технику сразу.</p></section>';
+  if(!modernEraOk(s,1900))return h+'<p class="sub">Доступно с 1900 года. В испытании построек выбери Новое время, чтобы проверить технику сразу.</p></section>';
   const jobs=dep.jobs.map((j,i)=>(FIELD_TYPES[j.kind]||FIELD_SUPPLIES[j.kind]).name+(i===0?' · '+transportTime(j.left):''));
   h+='<p class="sub">'+(jobs.length?'В производстве · '+jobs.join(' → '):'Производственная линия свободна.')+'</p><div class="cards">';
   const types=base?[...Object.keys(FIELD_TYPES),'kit','missile']:['bomb','specialRocket','specialBomb'];
@@ -19048,6 +19048,13 @@ boot();
 (function () {
   const nav = $('harbor-actions'), menu = nav && nav.parentElement; if (!nav || !menu) return;
   const NEWS = [
+    { v: '0.5', date: '25 ноября 2026', title: 'Нефть и титан', items: [
+      ['Нефть и титан', 'С 1900 года на карте видны нефтяные месторождения (чёрные лужи) и залежи титана (серебристые камни). Ставь у них нефтяные вышки и титановые рудники.'],
+      ['НПЗ', 'Нефтеперерабатывающий завод превращает нефть в топливо и продаёт его — из нефти получается золото.'],
+      ['Техника стоит нефти и титана', 'РСЗО, ПВО, дроны, вертолёты, самолёты и ракеты теперь требуют нефть и титан. Нет своих — купи за золото во вкладке обмена.'],
+      ['Сначала рынок, потом ТЦ', 'Торговый центр открывается только с 1900 года, до этого торгуют на рынке. Военная база и современная техника — тоже с 1900 года.'],
+      ['Соседи воюют по-новому', 'После 1900 года компьютерные державы строят военные базы, НПЗ и арсеналы, копят ракеты и ядерный запас, запускают рои дронов, РСЗО и авиацию и воюют друг с другом. В затяжной войне могут нанести ядерный удар.'],
+    ] },
     { v: '0.4', date: '25 ноября 2026', title: 'Техника и тестер', items: [
       ['Пауза на Esc', 'Esc в партии ставит игру на паузу и открывает меню: продолжить, сохранить, настройки, главное меню. Если открыта панель или идёт стройка, Esc по-прежнему делает шаг назад.'],
       ['Реалистичная техника', 'Новый истребитель с двумя килями и ракетами на пилонах, РСЗО на армейском грузовике с пакетом из 40 труб, зенитный комплекс с радарами, ракетами и пушками, позиция ПВО с пусковыми установками.'],
@@ -19366,7 +19373,7 @@ var FIELD_SPLASH = { specialRocket: .8, specialBomb: .8, bomb: .42 }, FIELD_MISS
   fieldAI = function () {
     const op = fieldOps(), due = G.t >= op.nextAI; ai0(); if (!due) return;
     for (const s of G.states) {
-      if (s.bandit || !s.alive || s.isPlayer || !modernEraOk(s, 1951)) continue;
+      if (s.bandit || !s.alive || s.isPlayer || !modernEraOk(s,1900)) continue;
       const base = s.buildings.find(b => b.type === 'milbase' && b.done); if (!base) continue;
       const dep = depotOf(base), ours = op.units.filter(u => u.owner === s.id), c = s.capital;
       const foe = G.states.find(o => o.alive && !o.bandit && o.capital && hostile(o.id, s.id));
@@ -19754,7 +19761,7 @@ var FIELD_SPLASH = { specialRocket: .8, specialBomb: .8, bomb: .42 }, FIELD_MISS
   };
   function buildHtml() {
     const s = G.player, L = ['house', 'farm', 'lumber', 'quarry', 'mine', 'store', 'market', 'school', 'barracks', 'forge', 'tower', 'outpost'];
-    if (W.mtype !== 'land') L.push('port'); if (modernEraOk(s, 1951)) L.push('milbase');
+    if (W.mtype !== 'land') L.push('port'); if (modernEraOk(s,1900)) L.push('milbase');
     const card = t => { const c = costOf(s, t), ok = canAfford(s, c); return '<button class="card' + (ok ? '' : ' dis') + '" data-act="build:' + t + '"><h3>' + bName(t, s.era, s) + '</h3><p>' + DESC[t] + '</p><span class="cost">' + costHtml(s, c) + '</span></button>'; };
     const fort = s.capital && s.capital.fort && s.capital.fort.lvl ? 'Усилить стены столицы' : 'Обнести столицу стеной';
     return '<h2>Строить</h2><div class="cards easy-grid">' + L.map(card).join('') + '</div>' +
@@ -21625,6 +21632,298 @@ body.cine #tester-bar{visibility:hidden}
 #pause-menu .pm-note{margin:4px 0 0;text-align:center;color:var(--mut);font-size:12.5px}
 `;
   document.head.append(css);
+})();
+</script>
+<script id="modern-js">
+// ===== 31_modern.js =====
+// ---------- Новое время с 1900 года: нефть и титан на карте, нефтяная вышка, НПЗ, титановый рудник; техника и ракеты
+// требуют нефть и титан (их можно добыть или купить за золото); соседи после 1900 года строят базы, копят ракеты и
+// ядерный запас, выпускают дроны, РСЗО и авиацию и воюют ими вместе с войсками. ----------
+(function () {
+  if (typeof INDUSTRY === 'undefined' || typeof FIELD_TYPES === 'undefined' || window.MODERN) return;
+  const MD = window.MODERN = { year: 1900, log: [] };
+  const H = Math.PI / 2, YEAR = 1900;
+  const NEW = ['oil', 'titan'];
+  RNAME.oil = 'нефть'; RNAME.titan = 'титан';
+  ICON.oil = '<svg viewBox="0 0 16 16"><path d="M8 1.5C6 5 3.8 7.4 3.8 10a4.2 4.2 0 008.4 0C12.2 7.4 10 5 8 1.5z" fill="#1d1d22" stroke="#6b6f7a" stroke-width=".8"/><path d="M6 10.5a2 2 0 001.6 2" stroke="#9aa3b5" fill="none"/></svg>';
+  ICON.titan = '<svg viewBox="0 0 16 16"><path d="M8 1.5l5 3v7l-5 3-5-3v-7z" fill="#9fb3c4" stroke="#55697a" stroke-width=".8"/><path d="M8 1.5v13M3 4.5l10 7M13 4.5l-10 7" stroke="#d9e6ef" stroke-width=".5"/></svg>';
+  if (typeof EXCHANGE_GOODS !== 'undefined') { EXCHANGE_GOODS.oil = 5; EXCHANGE_GOODS.titan = 8; }
+  const open = s => !!s && !s.bandit && typeof modernEraOk === 'function' && modernEraOk(s, YEAR);
+  const ensure = s => { if (s && s.res) for (const k of NEW) if (!(s.res[k] >= 0)) s.res[k] = 0; };
+
+  // ---------- техника и боеприпасы стоят нефти и титана ----------
+  const EXTRA = { drone: [2, 2], launcher: [6, 5], airguard: [5, 6], jet: [7, 8], sam: [5, 4] };
+  for (const [k, [ti, oi]] of Object.entries(EXTRA)) if (FIELD_TYPES[k]) Object.assign(FIELD_TYPES[k].cost, { titan: ti, oil: oi });
+  const SUP = { kit: [4, 2], missile: [3, 4], specialRocket: [14, 8], bomb: [1, 1], specialBomb: [10, 4] };
+  for (const [k, [ti, oi]] of Object.entries(SUP)) if (FIELD_SUPPLIES[k]) Object.assign(FIELD_SUPPLIES[k].cost, { titan: ti, oil: oi });
+
+  // ---------- новые постройки ----------
+  const DEFS = {
+    oilrig: { name: 'Нефтяная вышка', year: YEAR, jobs: 2, r: 6, hp: 420, time: 20, need: 'oil', cost: { wood: 40, stone: 30, metal: 30, gold: 60 }, desc: 'С 1900 года. Ставится у нефтяного месторождения — чёрных луж на карте. Добывает нефть: она нужна для РСЗО, ПВО, самолётов, дронов и ракет.' },
+    refinery: { name: 'НПЗ', year: YEAR, watts: -2, jobs: 4, r: 11, hp: 900, time: 40, cost: { stone: 90, metal: 60, gold: 120 }, desc: 'Нефтеперерабатывающий завод. Перерабатывает нефть в топливо и продаёт его: из нефти получается золото.' },
+    titanmine: { name: 'Титановый рудник', year: YEAR, jobs: 3, r: 7, hp: 500, time: 26, need: 'titan', cost: { wood: 50, stone: 40, gold: 70 }, desc: 'С 1900 года. Ставится у залежи титана — серебристых камней. Титан — особый металл для ракет, РСЗО, ПВО и самолётов.' },
+  };
+  for (const [type, d] of Object.entries(DEFS)) {
+    INDUSTRY[type] = BDEF[type] = d; BHT[type] = type === 'refinery' ? 14 : 9; SCAF[type] = [0, 0, Math.min(7, d.r * .7), 6];
+    CLSOF[type] = 'work'; JOBN[type] = type === 'refinery' ? 'нефтепереработчик' : type === 'oilrig' ? 'нефтяник' : 'горняк';
+  }
+  const cat = BCATS.find(c => c[0] === 'Промышленность'); if (cat) cat[1].push('oilrig', 'refinery', 'titanmine');
+
+  // место у залежи
+  const place0 = canPlace;
+  canPlace = function (s, type, x, z, founding, developer) {
+    const v = place0.apply(this, arguments); if (!v.ok) return v;
+    const d = BDEF[type];
+    if (d && d.need === 'oil' && !nearDeposit(x, z, 'oil', 22)) return { ok: false, why: 'Вышку ставят у нефтяного месторождения (чёрные лужи)' };
+    if (d && d.need === 'titan' && !nearDeposit(x, z, 'titan', 26)) return { ok: false, why: 'Рядом нет залежи титана (серебристые камни)' };
+    if (type === 'emporium' && !open(s) && !(developer && developerActive(s))) return { ok: false, why: 'Торговый центр открывается с 1900 года. До этого торгуют на рынке.' };
+    return v;
+  };
+
+  // ---------- залежи нефти и титана: те же семена мира, так что после загрузки они на тех же местах ----------
+  const gen0 = genWorld;
+  genWorld = function () { const r = gen0.apply(this, arguments); try { addDeposits(); } catch (e) { console.warn('modern deposits', e); } return r; };
+  function addDeposits() {
+    const rnd = mulberry32(((W.seed || 1) * 7 + 911) >>> 0), T = W.trees;
+    for (const rg of W.regions) for (const [kind, p] of [['oil', .42], ['titan', .24]]) {
+      if (rnd() > p) continue;
+      for (let t = 0; t < 14; t++) {
+        const a = rnd() * Math.PI * 2, dd = 25 + rnd() * 50, x = rg.x + Math.cos(a) * dd, z = rg.z + Math.sin(a) * dd;
+        if (regionAt(x, z) !== rg.id || heightAt(x, z) < 1 || (rg.cap && dist2(x, z, rg.x, rg.z) < 40 * 40)) continue;
+        if (W.deposits.some(o => dist2(o.x, o.z, x, z) < 32 * 32)) continue;
+        const y = heightAt(x, z);
+        W.deposits.push({ id: W.deposits.length, x, z, kind, modern: 1, yaw: rnd() * 6.28, y, rocks: [{ x, z, y: y - 6, s: .001, sy: .001, yaw: 0 }] });
+        if (T) for (let k = 0; k < T.n; k++) if (Math.abs(T.x[k] - x) < 9 && Math.abs(T.z[k] - z) < 9) T.alive[k] = 0;
+        break;
+      }
+    }
+  }
+  // залежи видны с 1900 года (в режиме тестера и при открытом режиме разработчика — сразу)
+  const visible = () => G.started && G.player && (open(G.player) || (G.travel && G.travel.tester));
+  const dl0 = drawLandmarks;
+  drawLandmarks = function () {
+    dl0();
+    if (!visible() && !(typeof developerEnabled !== 'undefined' && developerEnabled)) return;
+    for (const d of W.deposits) {
+      if (!d.modern || !inView(d.x, d.y + 1, d.z, 12)) continue;
+      PB(d.kind === 'oil' ? 'depOil' : 'depTitan').push(d.x, heightAt(d.x, d.z) + .03, d.z, d.yaw, 1, 1, 0, 1, 1, 1, 1, 0);
+    }
+  };
+
+  // ---------- модели ----------
+  const blk = C(0x15161a), blk2 = C(0x2a2d35), sheen = C(0x4b5363), rust = C(0x7a4a2c), steelC = C(0x5d6a72), yellow = C(0xd9a62e), white = C(0xdedcd3), concreteC = C(0xa09d94), ti = C(0xa9bccb), tiDk = C(0x6a8090), fire = C(0xffa23a);
+  MODELS.depOil = () => {
+    const g = new Geo();
+    g.cyl(0, -.04, 0, 4.2, 4.0, .08, blk, { seg: 18, ez: .7 });
+    g.cyl(.6, .02, .3, 2.6, 2.4, .04, blk2, { seg: 16, ez: .65 });
+    g.cyl(1.0, .05, .5, 1.1, 1.0, .02, sheen, { seg: 12, ez: .6 });
+    for (const [x, z, r] of [[-3.6, 1.2, .5], [3.2, -1.8, .4], [-1.5, -3.0, .35]]) g.sph(x, .1, z, r, blk2, { seg: 6, sy: .55 });
+    g.cyl(-4.6, 0, -1.4, .38, .38, .9, rust, { seg: 10 }); g.cyl(-4.0, 0, -2.2, .38, .38, .9, C(0x3d4f5a), { seg: 10 });   // бочки старателей
+    return g.out();
+  };
+  MODELS.depTitan = () => {
+    const g = new Geo();
+    for (const [x, z, h, r, a] of [[0, 0, 2.6, .7, .1], [1.2, .6, 1.8, .5, .5], [-1.1, .8, 2.0, .55, -.4], [.4, -1.2, 1.5, .45, .7], [-.8, -1.0, 1.2, .4, -.8], [1.9, -.7, 1.1, .35, .3]]) {
+      g.cyl(x, 0, z, r, r * .85, h * .7, a > 0 ? ti : tiDk, { seg: 6, rz: a * .4, rx: -a * .25 });
+      g.cyl(x + Math.sin(a * .4) * -h * .28, h * .66, z + Math.sin(-a * .25) * h * .28, r * .85, .02, h * .35, ti, { seg: 6, rz: a * .4, rx: -a * .25 });
+    }
+    g.cyl(0, -.05, 0, 3.0, 2.8, .1, C(0x5a5f63), { seg: 14 });
+    return g.out();
+  };
+  // нефтяная вышка: качалка «станок-качалка», буровая вышка-решётка, резервуар
+  BGEN.oilrig = function (g) {
+    g.box(0, 0, 0, 9, .2, 9, concreteC);
+    // качалка
+    g.box(0, .2, .5, 1.4, .3, 4.6, steelC);
+    for (const s of [-1, 1]) g.box(s * .45, .5, .7, .14, 2.6, .14, yellow, { rz: s * .22 });          // стойки «А»
+    g.box(0, 3.0, .7, .5, .25, .5, steelC);
+    g.box(0, 3.1, .3, .32, .34, 4.6, C(0x2e3338), { rx: -.08 });                                     // балансир
+    g.box(0, 2.3, 2.75, .5, 1.5, .5, yellow, { rx: -.08 });                                           // «голова лошади»
+    g.cyl(0, .6, 3.1, .04, .04, 2.0, steelC, { seg: 4 });                                             // канат
+    g.cyl(0, .2, 3.1, .25, .2, .5, C(0x47362a), { seg: 8 });                                          // устье скважины
+    for (const s of [-1, 1]) { g.cyl(s * .55, 1.3, -1.6, .75, .75, .2, C(0x8e2d24), { seg: 12, rz: H }); }   // противовесы
+    g.box(0, .5, -2.3, .9, .7, .9, C(0x355c3c));                                                      // двигатель
+    // буровая вышка
+    g.grp(-2.8, .2, -2.4, 0, () => {
+      const hh = 9;
+      for (const [x, z] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) g.box(x * .9, 0, z * .9, .12, hh, .12, rust, { rx: -z * .08, rz: x * .08 });
+      for (let k = 1; k < 6; k++) { const y = k * hh / 6, w = 1.9 - k * .22; g.box(0, y, w / 2, w, .07, .07, rust); g.box(0, y, -w / 2, w, .07, .07, rust); g.box(w / 2, y, 0, .07, .07, w, rust); g.box(-w / 2, y, 0, .07, .07, w, rust); }
+      g.box(0, hh, 0, .8, .3, .8, steelC); g.cyl(0, hh + .3, 0, .25, .25, .3, steelC, { seg: 8, rz: H });
+      g.box(0, 2.6, 0, .7, .08, .7, WH, null, 1);
+    });
+    // резервуар и трубы
+    g.cyl(2.8, .2, -2.4, 1.3, 1.3, 2.2, white, { seg: 16, sm: 1 }); g.cyl(2.8, 2.4, -2.4, 1.32, .2, .3, white, { seg: 16 });
+    g.cyl(2.8, 1.2, -2.4, 1.33, 1.33, .3, WH, { seg: 16, noTop: 1, noBottom: 1 }, 1);
+    g.box(1.6, .5, -.8, .14, .14, 3.2, steelC, { ry: .6 });
+  };
+  // НПЗ: ректификационные колонны, установка крекинга, резервуарный парк, эстакады, факел
+  BGEN.refinery = function (g) {
+    g.box(0, 0, 0, 20, .2, 20, concreteC);
+    for (const [x, z, r, h] of [[-4, -3, .9, 12], [-1.6, -3.6, .7, 9.5], [-5.5, -.2, .6, 8]]) {
+      g.cyl(x, .2, z, r, r * .9, h, C(0xb8b9b2), { seg: 12, sm: 1 }); g.cyl(x, h + .2, z, r * .9, .1, .6, C(0xb8b9b2), { seg: 12 });
+      for (let k = 2; k < h; k += 2.6) g.cyl(x, k, z, r + .3, r + .3, .1, steelC, { seg: 12 });           // площадки
+      g.box(x + r + .3, .2, z, .08, h, .08, steelC);
+    }
+    g.box(1.5, .2, -3.5, 4.2, 3.4, 3.2, C(0x8b9096)); g.box(1.5, 3.6, -3.5, 4.4, .2, 3.4, steelC);       // крекинг
+    for (let i = 0; i < 4; i++) g.cyl(.2 + i * .9, 3.8, -4.6, .15, .15, 2.5 + i * .3, C(0x6d7378), { seg: 8 });
+    for (const [x, z] of [[4.5, 3.5], [1, 4.5], [-2.8, 4.4], [5.8, -1]]) {                                 // резервуары
+      g.cyl(x, .2, z, 1.8, 1.8, 2.6, white, { seg: 18, sm: 1 }); g.cyl(x, 2.8, z, 1.82, .2, .35, C(0xcfccc2), { seg: 18 });
+      g.cyl(x, 1.6, z, 1.83, 1.83, .35, WH, { seg: 18, noTop: 1, noBottom: 1 }, 1);
+    }
+    for (const z of [.8, 1.5]) g.box(0, 2.2 + (z - .8), z, 15, .18, .18, steelC);                           // эстакада труб
+    for (const x of [-6, -2, 2, 6]) g.box(x, .2, 1.15, .2, 2.2, .9, C(0x4d565c));
+    g.cyl(7.6, .2, 6.8, .22, .16, 11, C(0x9c2f25), { seg: 8 });                                            // факел
+    g.cyl(7.6, 11.2, 6.8, .5, .02, 1.6, fire, { seg: 8 }, 3); g.cyl(7.6, 11.2, 6.8, .25, .01, 2.2, C(0xffe3a0), { seg: 6 }, 3);
+    g.box(-6.5, .2, 6.5, 3, 2.4, 2.2, C(0x8f8a7d)); g.box(-6.5, 1.3, 7.62, 2.4, .5, .04, C(0x2f4652), null, 2);   // управление
+  };
+  // титановый рудник: копёр с колесом, надшахтное здание, транспортёр, отвал руды
+  BGEN.titanmine = function (g) {
+    g.box(0, 0, 0, 12, .2, 12, concreteC);
+    g.box(-1.5, .2, -1.5, 4.2, 3.2, 4.2, C(0x8b6b52)); g.box(-1.5, 3.4, -1.5, 4.5, .25, 4.5, C(0x4b3c33));
+    g.grp(-1.5, 3.6, -1.5, 0, () => {
+      for (const s of [-1, 1]) { g.box(s * 1.1, 0, -.9, .2, 6, .2, rust, { rz: s * .18 }); g.box(s * 1.1, 0, .9, .2, 6, .2, rust, { rz: s * .18 }); }
+      g.box(0, 2.2, 0, 2.4, .12, .12, rust); g.box(0, 4.2, 0, 1.6, .12, .12, rust);
+      g.cyl(0, 5.8, 0, 1.0, 1.0, .18, steelC, { seg: 16, rx: H });                                         // колесо подъёмника
+      for (let i = 0; i < 4; i++) g.box(0, 5.8, 0, .06, 1.9, .06, steelC, { rx: i * .78 });
+    });
+    g.box(2.6, 1.6, .8, 1.0, .4, 6.0, C(0x55595c), { rx: .38 });                                           // транспортёр
+    g.sph(3.4, .2, 4.0, 2.0, ti, { seg: 8, sy: .55, jit: .3 }); g.sph(2.2, .2, 4.4, 1.3, tiDk, { seg: 7, sy: .5, jit: .3 });
+    g.box(-4.5, .2, 3.5, 2.6, 1.6, 2.2, C(0x5e6b4a)); g.box(-4.5, 1.2, 4.62, 2.6, .25, .02, WH, null, 1);
+  };
+
+  // ---------- добыча и переработка ----------
+  let acc = 0;
+  const step0 = simStep;
+  simStep = function (dt) {
+    const r = step0.apply(this, arguments);
+    acc += dt || 0; if (acc < 1) return r; const sec = acc; acc = 0;
+    for (const s of G.states) {
+      if (s.bandit || !s.alive) continue; ensure(s);
+      const cap = Math.max(200, s.cap || 0), grid = typeof gridPower === 'function' ? gridPower(s).factor : 1;
+      for (const b of s.buildings) {
+        if (!b.done || b.off) continue;
+        const d = DEFS[b.type]; if (!d) continue;
+        const crew = d.jobs ? Math.min(1, (b.w || 0) / d.jobs) : 1, k = s.isPlayer ? 1 : .8 + .4 * crew;   // соседи работают и без полного штата
+        if (b.type === 'oilrig') s.res.oil = Math.min(cap, s.res.oil + .5 * (s.isPlayer ? crew : k) * sec);
+        if (b.type === 'titanmine') s.res.titan = Math.min(cap, s.res.titan + .32 * (s.isPlayer ? crew : k) * sec);
+        if (b.type === 'refinery') { const use = Math.min(s.res.oil, .6 * (s.isPlayer ? crew * grid : k) * sec); s.res.oil -= use; s.res.gold += use * 3.4; }
+      }
+      if (G.travel && G.travel.tester && s.isPlayer) for (const k2 of NEW) s.res[k2] = Math.max(s.res[k2], 999999);
+    }
+    if (G.travel) aiStep();
+    return r;
+  };
+
+  // ---------- строка ресурсов: нефть и титан с 1900 года ----------
+  const ref0 = UI.refresh;
+  UI.refresh = function () {
+    const r = ref0.apply(this, arguments);
+    const s = G.player; if (!G.started || !s) return r; ensure(s);
+    if (!(open(s) || s.res.oil > 0 || s.res.titan > 0)) return r;
+    const el = $('res'); if (!el || el.querySelector('[data-modern]')) return r;
+    let h = '';
+    for (const k of NEW) h += `<span class="chip" data-modern="${k}" title="${RNAME[k]}">${ICON[k]}<b>${fmt(s.res[k])}</b></span>`;
+    const sci = el.querySelector('[title="наука"]'); if (sci) sci.insertAdjacentHTML('beforebegin', h); else el.insertAdjacentHTML('beforeend', h);
+    return r;
+  };
+
+  // ---------- режим разработчика: выдача нефти и титана ----------
+  if (typeof developerItems === 'function') {
+    const items0 = developerItems;
+    developerItems = function (group, s) { const L = items0.apply(this, arguments); return group === 'resource' ? L.concat([['oil', 'Нефть'], ['titan', 'Титан']]) : L; };
+  }
+
+  // ---------- соседи после 1900 года ----------
+  function spotNear(s, type, cx, cz, r0, r1) {
+    for (let r = r0; r <= r1; r += 6) for (let i = 0; i < 20; i++) {
+      const a = i / 20 * Math.PI * 2 + r * .37, x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
+      try { if (canPlace(s, type, x, z).ok) return [x, z, a]; } catch { }
+    }
+    return null;
+  }
+  function aiBuy(s, need) {   // докупить нефть и титан за золото, если не хватает
+    for (const k of NEW) {
+      const lack = Math.ceil((need[k] || 0) - (s.res[k] || 0)); if (lack <= 0) continue;
+      const gold = lack * EXCHANGE_GOODS[k] * 1.25; if (s.res.gold - gold < 80) return false;
+      s.res.gold -= gold; s.res[k] += lack;
+    }
+    return true;
+  }
+  function aiBuild(s, type) {
+    if (s.buildings.some(b => b.type === type)) return false;
+    const cost = costOf(s, type); if (!canAfford(s, cost)) return false;
+    let p = null;
+    if (BDEF[type].need === 'oil' || BDEF[type].need === 'titan') {
+      for (const d of W.deposits) {
+        if (d.kind !== BDEF[type].need || W.regions[regionAt(d.x, d.z)]?.owner !== s.id) continue;
+        p = spotNear(s, type, d.x, d.z, 10, 20); if (p) break;
+      }
+    } else p = spotNear(s, type, s.capital.x, s.capital.z, 34, 110);
+    if (!p) return false;
+    pay(s, cost); addBuilding(s, type, p[0], p[1], p[2] + Math.PI, true); return true;
+  }
+  const WANT = { drone: 6, launcher: 3, jet: 2, airguard: 2, sam: 1 };
+  function aiProduce(s, base, arsenal) {
+    const dep = depotOf(base); if (dep.jobs.length >= 2) return;
+    const mine = fieldOps().units.filter(u => u.owner === s.id && u.hp > 0), stock = ammoOf(s.id), queued = k => dep.jobs.filter(j => j.kind === k).length;
+    let kind = Object.keys(WANT).find(k => FIELD_TYPES[k] && mine.filter(u => u.kind === k).length + queued(k) < WANT[k] && (k !== 'jet' || modernEraOk(s, 1930)));
+    if ((stock.missile || 0) + queued('missile') < 4 && Math.random() < .5) kind = 'missile';
+    if (kind) { const d = FIELD_TYPES[kind] || FIELD_SUPPLIES[kind]; if (aiBuy(s, d.cost)) fieldOrder(s, base, kind); }
+    if (arsenal) {
+      const da = depotOf(arsenal);
+      if (!da.jobs.length && (stock.specialRocket || 0) < 2 && modernEraOk(s, 1945)) { if (aiBuy(s, FIELD_SUPPLIES.specialRocket.cost)) fieldOrder(s, arsenal, 'specialRocket'); }
+    }
+  }
+  function enemyTarget(s) {
+    const foes = G.states.filter(o => o !== s && o.alive && !o.bandit && o.capital && hostile(s.id, o.id));
+    if (!foes.length) return null;
+    const o = foes.sort((a, b) => dist2(a.capital.x, a.capital.z, s.capital.x, s.capital.z) - dist2(b.capital.x, b.capital.z, s.capital.x, s.capital.z))[0];
+    const pri = ['milbase', 'airdef', 'arsenal', 'barracks', 'refinery', 'castle', 'center'];
+    const L = o.buildings.filter(b => b.done && b.hp > 0);
+    L.sort((a, b) => ((pri.indexOf(a.type) + 1 || 9) - (pri.indexOf(b.type) + 1 || 9)) || dist2(a.x, a.z, s.capital.x, s.capital.z) - dist2(b.x, b.z, s.capital.x, s.capital.z));
+    return { o, b: L[0] || o.capital };
+  }
+  function news(text, bad) { MD.log.unshift(text); if (MD.log.length > 20) MD.log.pop(); try { toast(text, bad ? 'bad' : ''); } catch { } }
+  let aiT = 0;
+  function aiStep() {
+    if (G.t < aiT) return; aiT = G.t + 4;
+    for (const s of G.states) {
+      if (s.bandit || !s.alive || s.isPlayer || !s.capital || !open(s)) continue;
+      const A = s.mod || (s.mod = { next: G.t + (s.id % 5) * 2, war: 0, miss: 0, nuke: 0, drones: 0, decl: G.t + 240 + s.id * 40 });
+      if (G.t < A.next) continue; A.next = G.t + 9;
+      ensure(s);
+      // экономика: нефть, титан, база, арсенал, НПЗ
+      if (s.res.gold > 260 && (s.res.oil < 25 || s.res.titan < 25)) aiBuy(s, { oil: 30, titan: 30 });
+      for (const t of ['milbase', 'oilrig', 'titanmine', 'refinery', 'arsenal']) if (aiBuild(s, t)) break;
+      const base = s.buildings.find(b => b.type === 'milbase' && b.done), arsenal = s.buildings.find(b => b.type === 'arsenal' && b.done);
+      if (base) aiProduce(s, base, arsenal);
+      // война: дроны стаей, техника, ракеты с базы, в затяжной войне — ядерный удар
+      const T = enemyTarget(s);
+      if (!T) { A.war = 0; }
+      else {
+        if (!A.war) A.war = G.t;
+        const ref = { kind: 'building', id: T.b.id }, idle = fieldOps().units.filter(u => u.owner === s.id && u.hp > 0 && !u.target && u.kind !== 'sam');
+        const drones = idle.filter(u => u.kind === 'drone');
+        if (drones.length >= 3 && G.t > A.drones) { for (const u of drones) aimFieldUnit(u, ref); A.drones = G.t + 25; if (T.o.isPlayer) news('«' + s.nation.name + '» запустила рой дронов: ' + drones.length + ' шт.', true); }
+        for (const u of idle) if (u.kind !== 'drone') aimFieldUnit(u, ref);
+        const stock = ammoOf(s.id);
+        if (base && stock.missile > 0 && G.t > A.miss) { if (!launchFromBase(base, 'missile', ref)) { A.miss = G.t + 30; if (T.o.isPlayer) news('«' + s.nation.name + '» нанесла ракетный удар', true); } }
+        if (base && stock.specialRocket > 0 && G.t > A.nuke && G.t - A.war > 600 && Math.random() < .12) {
+          if (!launchFromBase(base, 'specialRocket', { kind: 'building', id: T.o.capital.id })) { A.nuke = G.t + 600; news('☢ «' + s.nation.name + '» нанесла ЯДЕРНЫЙ удар по «' + T.o.nation.name + '»!', true); }
+        }
+      }
+      // объявить войну соседу, если давно ни с кем не воюет
+      if (!T && G.t > A.decl) {
+        A.decl = G.t + 300 + Math.random() * 300;
+        if (Math.random() < .45) {
+          const o = G.states.filter(o => o !== s && o.alive && !o.bandit && o.capital && !o.isPlayer && !(typeof isAlly === 'function' && isAlly(s.id, o.id)))
+            .sort((a, b) => dist2(a.capital.x, a.capital.z, s.capital.x, s.capital.z) - dist2(b.capital.x, b.capital.z, s.capital.x, s.capital.z))[0];
+          if (o) { setWar(s.id, o.id, true); news('«' + s.nation.name + '» объявила войну «' + o.nation.name + '»'); }
+        }
+      }
+    }
+  }
+  MD.aiStep = aiStep; MD.addDeposits = addDeposits;
 })();
 </script>
 </body></html>
