@@ -1,4 +1,16 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><style id="infrastructure-build-style">
+#panel .cats.seg:has(> button[data-act^="cat:"]) {
+  flex-wrap: wrap; gap: 4px; padding: 1px; border: 0; overflow: visible;
+}
+#panel .cats.seg > button[data-act^="cat:"] {
+  flex: 1 0 auto; min-height: 38px; padding: 3px 8px;
+  border: 1px solid var(--line); border-radius: 7px;
+}
+@media (pointer: coarse) {
+  #panel .cats.seg > button[data-act^="cat:"] { min-height: 44px; }
+}
+</style>
+</head><body>
 <!doctype html>
 <html lang="ru">
 <head>
@@ -19817,6 +19829,14 @@ boot();
 (function () {
   const nav = $('harbor-actions'), menu = nav && nav.parentElement; if (!nav || !menu) return;
   const NEWS = [
+    { v: '0.8', date: '26 ноября 2026', title: 'Дороги, мосты и аэропорты', items: [
+      ['Дороги и мосты', 'Новая вкладка стройки «Дороги и мосты». Дороги: тропа, грунтовая, гравийная, римская мощёная, булыжная мостовая, а с Нового времени — асфальт в 2 полосы и магистраль в 4 полосы. У разных народов свои дороги: Рим, Греция, Египет, Персия, Хань, Скифия.'],
+      ['Переправы', 'Брод, деревянный мост на сваях, понтонный мост, каменный арочный мост, подвесной верёвочный мост через ущелье, паромная переправа, стальной ферменный и вантовый мосты, эстакада. Концы моста ставь на разных берегах. Пока по переправе кто-то идёт, снести её нельзя.'],
+      ['Детали дорог', 'Повороты, перекрёстки, кольцевая развязка, подъём к мосту, подъезд к воротам города, межевой столб, мильный камень, колодец, постоялый двор, дорожная застава, фонари и светофоры.'],
+      ['Аэропорт', 'Новая вкладка «Аэропорт»: диспетчерская вышка, ангар закрытый и с самолётом внутри, топливный резервуар, пожарная часть и пожарная машина, топливозаправщик, багажная тележка, трап, участки взлётной полосы и рулёжки. Открывается с 1951 года.'],
+      ['Форпост', 'Новая вкладка «Форпост» — военная база из отдельных построек: радарная вышка, штаб, полукруглые ангары, КПП со шлагбаумом, бетонные стены, мешки с песком, ящики, прожекторы, грузовик, вертолётная площадка, люк бункера. Открывается с 1801 года.'],
+      ['Эскизы инфраструктуры', '«Испытания» → «Эскизы войск»: добавлены листы аэропорта, военной базы, дорог и мостов античности и современности, форпоста и общая диорама.'],
+    ] },
     { v: '0.7', date: '26 ноября 2026', title: 'Танки и эскизы', items: [
       ['Танки и бронемашина', 'На военной базе теперь выпускают бронемашину «Дозор» (с 1908 года), танк «Рубеж» (с 1916-го) и современный танк «Гранит» (с 1951-го). Им нужны металл, оружие и нефть.'],
       ['Электросети', 'Новая постройка — подстанция. Она тянет линии между электростанциями, подстанциями и кварталами на расстоянии до 165 м. Заводы и НПЗ работают от сети, а часть заводов сама даёт немного энергии, сжигая дерево или нефть.'],
@@ -24980,6 +25000,1175 @@ function focusUniformTrial(){
 }
 
 </script>
+<script id="airport-kit-js">
+// Современный терминал и сборные постройки гражданского аэродрома.
+(() => {
+  const concrete = C(0xbabfba), white = C(0xeee9da), trim = C(0xcbd4d0);
+  const glass = C(0x64a4b6), shade = C(0x334951), teal = C(0x307985);
+  const apron = C(0x90978f), pavement = C(0x414955), metal = C(0x879397);
+  const yellow = C(0xf0bd54), red = C(0xb84338), rubber = C(0x2a3035);
+
+  // Обшивка арки. Не замыкает торцы, чтобы в открытом ангаре была видна машина.
+  function vault(g, x, y, z, width, rise, depth, segments, color, ribs) {
+    const a = width / 2, d = depth / 2;
+    const point = (i, side) => {
+      const angle = Math.PI * i / segments;
+      return [x + a * Math.cos(angle), y + rise * Math.sin(angle), z + d * side];
+    };
+    const inside = [x, y - .15, z];
+    for (let i = 0; i < segments; i++) {
+      const near = point(i, -1), next = point(i + 1, -1);
+      const far = point(i, 1), farNext = point(i + 1, 1);
+      g.quad(near, next, farNext, far, color, 0, inside);
+      g.quad(far, farNext, next, near, ribs);
+      const dx = next[0] - near[0], dy = next[1] - near[1];
+      const px = (next[0] + near[0]) / 2, py = (next[1] + near[1]) / 2;
+      for (const zOffset of [-d, -d / 2, 0, d / 2, d]) {
+        g.box(px, py, z + zOffset, Math.hypot(dx, dy) + .037, .08, .105, ribs,
+              {rz: Math.atan2(dy, dx)});
+      }
+      g.box(near[0], near[1], z, .058, .061, depth + .065, ribs);
+    }
+  }
+
+  function tower(g, shaft = 8.4) {
+    g.box(0, 0, 0, 4.6, .19, 4.45, apron);
+    g.pyr(0, .12, 0, 2.95, shaft, 2.95, concrete, {tw: 2.05, td: 2.05});
+    g.box(0, .20, 1.47, .74, 1.53, .06, shade);
+    g.box(0, 1.70, 1.53, 1.01, .14, .48, trim);
+    g.pyr(0, shaft - .2, 0, 2.15, .57, 2.15, shade, {tw: 4.15, td: 4.15});
+    g.box(0, shaft + .32, 0, 4.15, .29, 4.15, trim);
+    g.pyr(0, shaft + .60, 0, 3.77, 1.42, 3.77, glass, {tw: 4.22, td: 4.22});
+    for (const side of [-1, 1]) {
+      for (const offset of [-.7, .7]) {
+        g.box(offset, shaft + .60, side * 1.92, .075, 1.41, .075, shade, {rx: side * .141});
+        g.box(side * 1.92, shaft + .60, offset, .075, 1.41, .075, shade, {rz: -side * .141});
+      }
+    }
+    g.box(0, shaft + 2.01, 0, 4.52, .26, 4.52, shade);
+    g.cyl(.40, shaft + 2.26, -.58, .11, .08, .79, metal, {seg: 6});
+    g.box(.40, shaft + 2.93, -.58, 1.82, .28, .16, metal, {ry: .34});
+    g.box(-1.31, shaft + 2.27, .71, .15, .31, .15, red, null, 1);
+  }
+
+  function runway(g, cx, y, length, width) {
+    g.box(cx, y, 0, width, .09, length, pavement);
+    const top = y + .091;
+    for (let z = -length / 2 + 3.8; z <= length / 2 - 3.8; z += 4.1) {
+      g.box(cx, top, z, .16, .021, 1.9, white);
+    }
+    for (const side of [-1, 1]) {
+      const edge = cx + side * (width / 2 - .28);
+      g.box(edge, top, 0, .08, .024, length - .45, white);
+      for (let x = cx - width * .34; x <= cx + width * .34; x += .70) {
+        g.box(x, top, side * (length / 2 - 1.55), .34, .022, 1.58, white);
+      }
+      for (let z = -length / 2 + 1.4; z < length / 2; z += 3.1) {
+        g.box(cx + side * (width / 2 + .16), top - .034, z, .18, .105, .18, yellow, null, 1);
+      }
+    }
+  }
+
+  function taxiway(g, cx, y, length, width) {
+    g.box(cx, y, 0, width, .082, length, C(0x626b70));
+    g.box(cx, y + .083, 0, .14, .023, length, yellow);
+    for (const side of [-1, 1]) {
+      for (let z = -length / 2 + .9; z < length / 2; z += 2.9) {
+        g.box(cx + side * (width / 2 + .11), y + .047, z, .14, .12, .14, glass, null, 1);
+      }
+    }
+  }
+
+  function parkedPlane(g) {
+    g.sph(0, .94, .05, .40, white, {ez: 6.9, sy: 1.08, seg: 11});
+    g.sph(0, 1.17, 1.21, .28, glass, {ez: 1.75, sy: .63, seg: 8});
+    g.box(0, .94, -.25, 5.22, .095, .89, trim);
+    g.box(0, 1.14, -2.04, 1.92, .075, .6, white);
+    g.pyr(0, 1.01, -1.86, .14, .92, .8, teal, {tw: .10, td: .36});
+    for (const side of [-1, 1]) {
+      g.sph(side * 1.13, .92, -.06, .23, teal, {ez: 2.55, seg: 8});
+      g.box(side * 1.13, .12, -.17, .09, .68, .11, shade);
+      g.cyl(side * 1.13 - .06, .23, -.17, .18, .18, .12, rubber, {rz: -Math.PI / 2, seg: 8});
+    }
+    g.box(0, .14, 1.32, .085, .47, .09, shade);
+    g.cyl(-.05, .18, 1.32, .12, .12, .10, rubber, {rz: -Math.PI / 2, seg: 8});
+  }
+
+  function hangar(g, open) {
+    g.box(0, 0, 0, 13.8, .17, 13.5, apron);
+    g.box(0, .17, 0, 10.8, .13, 11.1, shade);
+    for (const x of [-5.14, 5.14]) {
+      g.box(x, .29, 0, .3, 3.36, 11.16, metal);
+      g.box(x, .44, 5.65, .34, .14, 1.96, yellow);
+    }
+    g.box(0, .29, -5.51, 10.35, 3.4, .23, shade);
+    vault(g, 0, 3.65, 0, 10.65, 2.33, 11.25, 10, metal, trim);
+    for (const side of [-1, 1]) {
+      g.box(side * 4.81, .29, 5.56, .57, 3.38, .22, shade);
+      g.box(side * 4.25, 2.34, 5.69, .27, .14, .17, yellow, null, 1);
+    }
+    g.box(0, 3.47, 5.55, 10.05, .23, .32, shade);
+    if (open) {
+      g.grp(0, .30, .35, 0, () => parkedPlane(g));
+      g.box(0, .31, 4.04, .11, .024, 3.0, yellow);
+      return;
+    }
+    g.box(0, .30, 5.59, 9.10, 3.15, .19, teal);
+    for (const x of [-3.43, -2.29, -1.14, 0, 1.14, 2.29, 3.43]) {
+      g.box(x, .30, 5.71, .055, 3.16, .04, shade);
+    }
+    g.box(0, 1.38, 5.72, 8.95, .12, .042, trim);
+  }
+
+  function truck(g, color, cargo) {
+    g.box(0, .32, 0, 1.66, .28, 4.04, shade);
+    g.pyr(0, .59, 1.28, 1.76, 1.31, 1.51, color, {tw: 1.54, td: 1.36});
+    g.box(0, 1.10, 2.02, 1.31, .51, .045, glass, {rx: -.055});
+    g.box(0, .47, 2.05, 1.77, .16, .15, trim);
+    for (const side of [-1, 1]) {
+      g.box(side * .83, 1.13, 1.40, .045, .44, .65, glass);
+      g.box(side * .67, .67, 2.045, .24, .15, .044, yellow, null, 1);
+      for (const z of [-1.17, 1.36]) {
+        g.cyl(side * .86 - .14, .37, z, .34, .34, .28, rubber, {seg: 9, rz: -Math.PI / 2});
+      }
+    }
+    if (cargo === 'fuel') {
+      g.cyl(0, 1.08, -1.99, .64, .64, 2.45, white, {seg: 10, rx: Math.PI / 2});
+      g.box(0, 1.21, -1.22, 1.25, .19, 1.3, teal);
+      g.cyl(0, 1.70, -.72, .14, .14, .13, metal, {seg: 8});
+      return;
+    }
+    g.box(0, .58, -.77, 1.73, 1.27, 2.43, red);
+    for (const side of [-1, 1]) {
+      g.box(side * .88, .79, -.76, .065, .82, 1.54, metal);
+      g.box(side * .92, 1.38, -.76, .051, .095, .88, white);
+    }
+    g.box(0, 1.92, 1.41, .85, .16, .22, glass, null, 1);
+  }
+
+  function fireStation(g) {
+    g.box(0, 0, 0, 9.6, .15, 9.1, apron);
+    g.box(0, .14, -1.94, 8.95, 2.75, 4.42, concrete);
+    g.box(0, 2.82, -1.94, 9.2, .31, 4.64, shade);
+    g.box(0, 2.60, .31, 8.91, .19, .21, red);
+    for (const x of [-2.89, 0, 2.89]) {
+      g.box(x, .16, .31, 2.27, 1.92, .13, red);
+      g.box(x, 1.67, .395, 1.81, .27, .055, glass);
+    }
+    g.grp(.34, .16, 2.60, .17, () => truck(g, red, 'fire'));
+  }
+
+  function fuelTank(g) {
+    g.cyl(0, 0, 0, 2.85, 2.85, .17, apron, {seg: 14});
+    g.cyl(0, .165, 0, 2.2, 2.2, 2.85, white, {seg: 14});
+    g.cyl(0, 2.96, 0, 2.21, 1.90, .34, trim, {seg: 14});
+    g.cyl(0, 1.11, 0, 2.226, 2.226, .15, teal, {seg: 14});
+    g.cyl(0, 3.27, .43, .26, .26, .14, shade, {seg: 8});
+    for (const x of [-.24, .24]) g.box(x, .14, 2.275, .065, 3.2, .065, metal);
+    for (let y = .35; y <= 3.15; y += .31) g.box(0, y, 2.294, .52, .060, .068, metal);
+  }
+
+  function baggageCart(g) {
+    for (const side of [-1, 1]) {
+      for (const z of [-.65, .62]) {
+        g.cyl(side * .50 - .077, .21, z, .18, .18, .154, rubber, {seg: 8, rz: -Math.PI / 2});
+      }
+    }
+    g.box(0, .29, 0, 1.17, .14, 1.91, teal);
+    g.box(0, .46, -.37, 1.02, .45, .62, trim);
+    g.box(.24, .46, .25, .48, .33, .52, red);
+    g.box(-.28, .46, .30, .42, .47, .43, shade);
+    g.box(0, .34, 1.20, .1, .08, .68, metal);
+  }
+
+  function stairs(g) {
+    for (const side of [-1, 1]) {
+      for (const z of [-.92, .75]) {
+        g.cyl(side * .68 - .09, .23, z, .22, .22, .18, rubber, {seg: 8, rz: -Math.PI / 2});
+      }
+      g.box(side * .54, .27, -.35, .125, 1.49, .14, shade);
+      g.box(side * .56, .76, .56, .045, 2.39, .055, teal, {rx: -.88});
+      g.box(side * .56, 1.89, -.99, .05, .62, .05, teal);
+    }
+    g.box(0, .28, 0, 1.34, .16, 2.46, teal);
+    for (let i = 0; i < 7; i++) g.box(0, .45 + i * .216, 1.0 - i * .29, 1.13, .13, .34, trim);
+    g.box(0, 1.72, -1.04, 1.17, .13, .56, trim);
+  }
+
+  BGEN.airport = function (g) {
+    g.box(0, 0, 0, 24.0, .17, 32.0, apron);
+    g.box(-13.37, 0, 0, 8.1, .17, 29.25, apron);
+    taxiway(g, -13.25, .176, 29.2, 7.25);
+    runway(g, -4, .18, 31.0, 8.1);
+    for (const z of [-9.6, 0, 9.6]) {
+      g.box(-8.94, .269, z, 1.56, .018, .11, yellow);
+      g.box(-11.72, .269, z, 4.04, .019, .11, yellow);
+    }
+    g.box(6.83, .17, 3.5, 6.48, .28, 15.28, concrete);
+    g.box(6.83, .45, 3.5, 5.92, 2.79, 14.74, glass);
+    vault(g, 6.83, 3.21, 3.5, 6.56, 1.59, 15.06, 10, glass, trim);
+    for (const side of [-1, 1]) {
+      for (let z = -3.41; z <= 10.72; z += 1.36) {
+        g.box(6.83 + side * 2.98, .46, z, .09, 2.79, .10, trim);
+      }
+    }
+    for (const z of [-.28, 7.29]) {
+      g.box(3.13, .19, z, .27, 1.13, .35, metal);
+      g.box(3.12, 1.28, z, 1.96, .91, .63, trim, {ry: .14});
+      g.box(2.48, 1.49, z - .16, 1.23, .32, .53, glass, {ry: .14});
+      g.box(2.18, 1.23, z + .12, .47, .92, .77, shade);
+    }
+    g.grp(8.46, .176, -8.36, 0, () => tower(g, 5.55));
+    kFlag(g, 10.32, .18, 12.60, 3.45, .70);
+  };
+  BHT.airport = 9.0;
+
+  const sites = [
+    ['airControlTower', 'Диспетчерская вышка', 3.55, 11.55, 24, {stone: 45, metal: 15, gold: 50},
+     'Бетонная башня со стеклянной кабиной и обзорной антенной.', g => tower(g)],
+    ['airHangar', 'Ангар', 9.70, 6.10, 24, {stone: 35, metal: 30, gold: 55},
+     'Арочный ангар с закрытыми воротами.', g => hangar(g, false)],
+    ['airHangarOpen', 'Открытый ангар', 9.70, 6.10, 24, {stone: 35, metal: 30, gold: 55},
+     'Арочный ангар с самолётом на обслуживании внутри.', g => hangar(g, true)],
+    ['airFuelTank', 'Топливный резервуар', 3.0, 3.48, 14, {stone: 10, metal: 20, gold: 25},
+     'Белый аэродромный бак с лестницей.', fuelTank],
+    ['airFireStation', 'Пожарная часть', 6.62, 3.15, 20, {stone: 35, metal: 12, gold: 45},
+     'Три гаража и пожарная машина площадки.', fireStation],
+    ['airFireTruck', 'Пожарная машина', 2.36, 2.12, 8, {metal: 10, gold: 15},
+     'Стоянка машины пожарной службы аэродрома.', g => truck(g, red, 'fire')],
+    ['airFuelTruck', 'Топливозаправщик', 2.36, 1.95, 8, {metal: 10, gold: 15},
+     'Стоянка аэродромного топливозаправщика.', g => truck(g, white, 'fuel')],
+    ['airBaggageCart', 'Багажная тележка', 1.56, 1.05, 6, {metal: 5, gold: 10},
+     'Тележка с багажом на перроне.', baggageCart],
+    ['airMobileStairs', 'Трап на колёсах', 1.82, 2.54, 8, {metal: 5, gold: 10},
+     'Передвижной пассажирский трап на стоянке.', stairs],
+    ['airRunwayTile', 'Участок взлётной полосы', 7.05, .20, 10, {stone: 15, gold: 10},
+     'Прямой участок аэродромного покрытия с белой разметкой и огнями.', g => runway(g, 0, 0, 11, 8.1)],
+    ['airTaxiTile', 'Участок рулёжной дорожки', 6.70, .18, 10, {stone: 10, gold: 10},
+     'Прямой участок аэродромного покрытия с жёлтой осевой линией.', g => taxiway(g, 0, 0, 11, 7.25)]
+  ];
+  const assembly = new Set();
+  for (const [type, name, r, height, time, cost, desc, draw] of sites) {
+    assembly.add(type);
+    BDEF[type] = {name, r, time, cost, desc, hp: 70 + r * 38, flat: 1.25};
+    BGEN[type] = draw;
+    BHT[type] = height;
+    SCAF[type] = [0, 0, Math.min(r * .65, 5), Math.max(height * .63, .25)];
+  }
+  BCATS.push(['Аэропорт', ['airport', ...assembly]]);
+
+  const baseAccess = industryAccess;
+  industryAccess = function (s, type) {
+    if (assembly.has(type) && !modernEraOk(s, CONTEMPORARY_YEAR)) {
+      return 'Аэродромная инфраструктура открывается с ' + CONTEMPORARY_YEAR + ' года.';
+    }
+    return baseAccess(s, type);
+  };
+})();
+</script>
+<script id="outpost-kit-js">
+(() => {
+  const olive = C(0x6a7651), darkOlive = C(0x454f37), painted = C(0x83916a);
+  const concrete = C(0xb4ad9d), foundation = C(0x8d8f88), steel = C(0x777f80);
+  const zinc = C(0x98a4a3), charcoal = C(0x3a4443), asphalt = C(0x505b5b);
+  const glass = C(0x4b738a), amber = C(0xf6d697), white = C(0xe6e5dc), red = C(0xbc5c44);
+  const sand = C(0xc6a36b), tan = C(0x9e8b67);
+  const noBottom = { noBottom: true };
+
+  function strut(g, a, b, width, color) {
+    const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
+    g.box(...a, width, Math.hypot(dx, dy, dz), width, color, {
+      ry: Math.atan2(-dz, dx),
+      rz: -Math.atan2(Math.hypot(dx, dz), dy),
+      noBottom: true
+    });
+  }
+
+  function dish(g) {
+    const segs = 12, center = [0, 7.52, 0], back = [0, 7.52, -.15];
+    const rim = (a, depth = 0) => [1.38 * Math.cos(a), 7.52 + 1.38 * Math.sin(a), .47 + depth];
+    const inner = a => [.66 * Math.cos(a), 7.52 + .66 * Math.sin(a), .12];
+    for (let i = 0; i < segs; i++) {
+      const a = i * TAU / segs, b = (i + 1) * TAU / segs;
+      g.tri(center, inner(a), inner(b), olive);
+      g.quad(inner(a), rim(a), rim(b), inner(b), olive);
+      g.tri(back, rim(b, -.12), rim(a, -.12), darkOlive);
+      g.quad(rim(a, -.12), rim(b, -.12), rim(b), rim(a), painted);
+    }
+    g.cyl(0, 7.52, .12, .14, .12, .62, darkOlive, { rx: -Math.PI / 2, seg: 7 });
+    g.sph(0, 7.52, .76, .20, olive, { seg: 8 });
+  }
+
+  function radarTower(g) {
+    g.box(0, 0, 0, 4.1, .34, 4.1, concrete, noBottom);
+    const levels = [
+      { y: .34, r: 1.57 }, { y: 2.22, r: 1.23 },
+      { y: 4.10, r: .89 }, { y: 5.98, r: .55 }
+    ];
+    const corners = level => [
+      [-level.r, level.y, -level.r], [level.r, level.y, -level.r],
+      [level.r, level.y, level.r], [-level.r, level.y, level.r]
+    ];
+    for (let i = 1; i < levels.length; i++) {
+      const low = corners(levels[i - 1]), high = corners(levels[i]);
+      for (let j = 0; j < 4; j++) {
+        const k = (j + 1) % 4;
+        strut(g, low[j], high[j], .20, darkOlive);
+        strut(g, low[j], high[k], .11, olive);
+        strut(g, low[k], high[j], .11, painted);
+        strut(g, high[j], high[k], .15, darkOlive);
+      }
+    }
+    g.box(0, 5.93, 0, 1.72, .24, 1.72, darkOlive, noBottom);
+    g.box(0, 6.17, -.18, .64, 1.36, .62, olive, noBottom);
+    dish(g);
+  }
+
+  function headquarters(g, width = 6.4, depth = 4.6, floorHeight = 1.86) {
+    const z = depth * .5, widthStep = width * .162, height = floorHeight * 2;
+    g.box(0, 0, 0, width + .38, .22, depth + .34, foundation, noBottom);
+    g.box(0, .22, 0, width, floorHeight, depth, olive, noBottom);
+    g.box(0, .22 + floorHeight, 0, width, floorHeight, depth, concrete, noBottom);
+    g.box(0, height + .22, 0, width + .38, .27, depth + .34, zinc, noBottom);
+    for (const side of [-1, 1]) {
+      for (const offset of [-2, -1, 0, 1, 2])
+        g.box(offset * widthStep, floorHeight * 1.36, side * (z + .022), widthStep * .77, .56, .05, glass);
+      for (const offset of [-1.25, 1.25])
+        g.box(offset * widthStep, floorHeight * .45, side * (z + .028), widthStep * .82, .54, .05, glass);
+      g.box(side * (width * .5 + .022), floorHeight * 1.36, depth * .12, .05, .57, depth * .55, glass);
+      g.box(side * width * .31, height + .49, -depth * .27, .60, .33, .44, charcoal);
+    }
+    g.box(0, .20, z + .17, 1.40, .10, .53, foundation, noBottom);
+    g.box(0, .27, z + .03, 1.02, floorHeight * .68, .06, charcoal);
+    g.box(0, floorHeight * .36, z + .07, .80, .56, .05, glass);
+    g.box(0, floorHeight * .83, z + .31, 1.92, .18, .95, zinc);
+    g.box(0, height + .49, -.5, .74, .32, .61, foundation, noBottom);
+    g.cyl(-.15, height + .81, -.5, .044, .032, 1.13, charcoal, { seg: 5 });
+    g.cyl(.19, height + .81, -.5, .035, .024, .75, charcoal, { seg: 5 });
+    g.box(-.15, height + 1.60, -.5, .54, .045, .045, charcoal);
+  }
+
+  function hangar(g, open) {
+    const width = 6.1, depth = 6.35, eaves = 2.24, rise = 1.77, edge = 7;
+    const front = depth * .5, back = -front;
+    g.box(0, 0, .12, width + .42, .19, depth + .60, foundation, noBottom);
+    for (const side of [-1, 1]) {
+      g.box(side * width * .5, .19, 0, .14, eaves - .19, depth, steel, noBottom);
+      g.box(side * 2.50, .19, front - .05, .90, eaves - .19, .13, concrete, noBottom);
+    }
+    g.box(0, .19, back, width, eaves - .19, .14, steel, noBottom);
+    const arc = (i, z, overhang = 1) => [
+      -width * .5 * overhang * Math.cos(Math.PI * i / edge),
+      eaves + rise * overhang * Math.sin(Math.PI * i / edge), z
+    ];
+    for (let i = 0; i < edge; i++) {
+      const a = arc(i, front), b = arc(i + 1, front);
+      g.quad(arc(i + 1, back - .10), arc(i, back - .10), arc(i, front + .10), arc(i + 1, front + .10), zinc, 0, [0, 1.7, 0]);
+      g.tri([0, eaves - .03, front], a, b, steel, 0, [0, 1.7, 0]);
+      g.tri([0, eaves - .03, back], arc(i, back), arc(i + 1, back), steel, 0, [0, 1.7, 0]);
+      for (const z of [-3.28, -2.39, -1.6, -.8, 0, .8, 1.6, 2.39, 3.28]) {
+        const p = arc(i, z, 1.026), q = arc(i + 1, z, 1.026);
+        g.quad(p, q, [q[0], q[1], z + .10], [p[0], p[1], z + .10], steel, 0, [0, 1.75, 0]);
+        g.tri(arc(i, z), p, q, steel);
+        g.tri(arc(i, z), q, arc(i + 1, z), steel);
+      }
+    }
+    for (const side of [-1, 1]) {
+      g.grp(side * 2.04, .19, front + .02, open ? side * 1.14 : 0, () => {
+        g.box(-side * 1.01, 0, 0, 1.99, 1.98, .16, charcoal, noBottom);
+        g.box(-side * 1.01, .09, -.09, 1.84, 1.78, .07, steel);
+        g.box(-side * 1.01, .09, .09, 1.84, 1.78, .07, steel);
+        for (const y of [.43, .84, 1.25, 1.66]) {
+          g.box(-side * 1.01, y, .13, 1.77, .034, .025, zinc);
+          g.box(-side * 1.01, y, -.13, 1.77, .034, .025, zinc);
+        }
+      });
+    }
+    if (open) {
+      g.box(0, .20, .17, 4.08, .03, 5.7, charcoal, noBottom);
+      for (const x of [-1.85, 1.85]) g.box(x, .235, .20, .075, .015, 5.76, amber, noBottom);
+      g.box(0, 1.51, back + .08, .94, .17, .07, amber, null, 2);
+    }
+  }
+
+  function truck(g) {
+    const rubber = C(0x2e3331), canvas = C(0xa89371);
+    g.box(0, .46, 0, 2.10, .37, 4.81, charcoal, noBottom);
+    g.box(0, .81, 1.43, 1.99, .86, 1.68, olive, noBottom);
+    g.pyr(0, 1.67, 1.42, 1.99, .43, 1.70, olive, { tw: 1.90, td: 1.33, top: painted });
+    g.box(0, 1.48, 2.274, 1.66, .52, .06, glass, { rx: -.20 });
+    g.box(0, 1.48, 2.307, .078, .52, .09, darkOlive, { rx: -.20 });
+    g.box(0, .66, 2.32, 2.14, .17, .17, charcoal);
+    g.box(0, .92, -1.04, 2.02, .55, 2.76, darkOlive, noBottom);
+    g.box(0, 1.47, -1.05, 2.16, .84, 2.81, canvas, noBottom);
+    g.gable(0, 2.30, -1.05, 2.17, .38, 2.81, canvas, { end: tan });
+    for (const side of [-1, 1]) {
+      g.box(side * 1.008, 1.55, 1.48, .055, .36, .81, glass);
+      g.box(side * .74, .94, 2.291, .29, .138, .08, amber, null, 2);
+      g.box(side * .73, .94, -2.48, .23, .115, .065, red);
+      for (const z of [1.46, -.73, -1.75]) {
+        const edge = { seg: 9, rz: -side * Math.PI / 2 };
+        g.cyl(side * .94, .43, z, .43, .43, .35, rubber, edge);
+        g.cyl(side * 1.29, .43, z, .22, .17, .035, steel, edge);
+      }
+    }
+  }
+
+  function checkpoint(g) {
+    g.box(-1.70, 0, 0, 2.2, .17, 2.36, foundation, noBottom);
+    g.box(-1.70, .17, 0, 1.96, 2.10, 2.10, concrete, noBottom);
+    g.box(-1.70, 2.27, 0, 2.27, .20, 2.41, zinc);
+    g.box(-1.70, 2.47, -.47, .52, .19, .51, charcoal);
+    g.box(-1.70, .27, -1.07, .72, 1.55, .06, charcoal);
+    g.box(-1.70, 1.05, 1.067, 1.34, .63, .06, glass);
+    g.box(-.71, 1.05, .15, .06, .64, 1.09, glass);
+    for (const x of [-.50, 2.52]) g.cyl(x, 0, .68, .14, .13, .81, steel, { seg: 7 });
+    g.box(1.01, .78, .68, 3.18, .16, .13, white);
+    for (const x of [-.33, .34, 1.01, 1.68, 2.35])
+      g.box(x, .78, .68, .36, .17, .143, red, { rz: -.20 });
+  }
+
+  function wall(g, width = 4.75, posts = 3) {
+    g.box(0, 0, 0, width, .26, .77, foundation, noBottom);
+    g.box(0, .26, 0, width - .40, 1.52, .34, concrete, noBottom);
+    g.box(0, 1.78, 0, width - .23, .12, .43, zinc);
+    for (let i = 0; i < posts; i++) {
+      const x = (i / (posts - 1) - .50) * (width - .65);
+      g.box(x, .12, 0, .39, 1.83, .62, foundation, noBottom);
+      g.pyr(x, .12, 0, .58, .43, .87, foundation, { tw: .35, td: .41 });
+    }
+  }
+
+  function sandbags(g) {
+    for (let y = 0; y < 3; y++) {
+      for (let x = 0; x < 3 - y; x++) {
+        g.sph((x - (2 - y) * .5) * .82, .20 + y * .31, y * .105, .46, x % 2 ? tan : sand, {
+          seg: 8, sy: .42, ez: .78
+        });
+      }
+    }
+  }
+
+  function crate(g) {
+    g.box(0, 0, 0, 1.19, .51, .67, darkOlive, noBottom);
+    g.box(0, .51, 0, 1.25, .107, .72, painted);
+    for (const x of [-.33, .33]) g.box(x, .23, .35, .10, .30, .05, olive);
+  }
+
+  function crates(g) {
+    for (const x of [-.64, .64]) g.grp(x, 0, 0, 0, () => crate(g));
+    g.grp(.29, .62, -.03, .12, () => crate(g));
+  }
+
+  function lamp(g) {
+    g.box(0, 0, 0, .54, .27, .55, foundation, noBottom);
+    g.cyl(0, .27, 0, .075, .059, 2.35, charcoal, { seg: 6 });
+    g.box(0, 2.55, .16, .42, .23, .58, charcoal, { rx: -.22 });
+    g.box(0, 2.48, .31, .31, .07, .30, amber, { rx: -.22 }, 2);
+  }
+
+  function helipad(g) {
+    g.cyl(0, 0, 0, 3.10, 3.10, .15, asphalt, { seg: 16, noBottom: true });
+    for (const x of [-.74, .74]) g.box(x, .15, 0, .16, .028, 1.96, white, noBottom);
+    g.box(0, .15, 0, 1.40, .028, .19, white, noBottom);
+    for (const x of [-1.75, 1.75]) {
+      for (const z of [-1.75, 1.75]) {
+        g.cyl(x, .15, z, .14, .14, .07, charcoal, { seg: 6 });
+        g.cyl(x, .22, z, .09, .075, .06, amber, { seg: 6 }, 2);
+      }
+    }
+  }
+
+  function hatch(g) {
+    g.box(0, 0, 0, 3.5, .24, 3.36, concrete, noBottom);
+    g.cyl(0, .24, 0, 1.33, 1.33, .17, charcoal, { seg: 12 });
+    g.cyl(0, .41, 0, 1.27, 1.14, .17, steel, { seg: 12, top: zinc });
+    for (const x of [-.22, .22]) g.box(x, .58, 0, .075, .043, 1.25, charcoal);
+    for (const x of [-1.46, 1.46]) {
+      g.box(x, .24, 1.3, .18, .08, .19, charcoal);
+      g.cyl(x, .32, 1.30, .054, .049, .04, amber, { seg: 6 }, 2);
+    }
+  }
+
+  const structures = {
+    fortRadar: { name: 'Радарная вышка', r: 3.4, h: 8.9, hp: 410, time: 21, cost: { stone: 20, metal: 30, gold: 30 },
+      desc: 'Решётчатая мачта с круглой антенной. Декоративная постройка.', model: radarTower, boxes: [[0, 0, 1.6, 1.6]] },
+    fortHQ: { name: 'Штаб', r: 4.6, h: 5.8, hp: 530, time: 22, cost: { stone: 50, metal: 15, gold: 25 },
+      desc: 'Двухэтажное здание с антеннами и цветным остеклением.', model: headquarters, boxes: [[0, 0, 3.24, 2.38]] },
+    fortHangar: { name: 'Ангар полукруглый', r: 4.9, h: 4.1, hp: 420, time: 16, cost: { stone: 20, metal: 30 },
+      desc: 'Ангар с арочной крышей и закрытыми воротами.', model: g => hangar(g, false), boxes: [[0, 0, 3.10, 3.23]] },
+    fortHangarOpen: { name: 'Ангар с открытыми воротами', r: 5.9, h: 4.1, hp: 420, time: 16, cost: { stone: 20, metal: 30 },
+      desc: 'Ангар с распахнутыми створками и разметкой на полу.', model: g => hangar(g, true), boxes: [[0, -3.17, 3.11, .10], [-3.03, 0, .12, 3.23], [3.03, 0, .12, 3.23]] },
+    fortCheckpoint: { name: 'КПП', r: 3.2, h: 2.7, hp: 200, time: 9, cost: { stone: 15, wood: 10 },
+      desc: 'Будка охраны с красно-белым шлагбаумом.', model: checkpoint, boxes: [[-1.7, 0, 1.1, 1.06]] },
+    fortWall: { name: 'Бетонная стена', r: 2.7, h: 1.95, hp: 250, time: 7, cost: { stone: 15 },
+      desc: 'Отдельная бетонная секция на стойках.', model: wall, boxes: [[0, 0, 2.38, .39]] },
+    fortSandbags: { name: 'Мешки с песком', r: 1.65, h: 1.02, hp: 65, time: 4, cost: { stone: 5 },
+      desc: 'Низкий ряд из тканевых мешков.', model: sandbags, boxes: [[0, 0, 1.3, .40]] },
+    fortCrates: { name: 'Ящики снабжения', r: 1.55, h: 1.24, hp: 65, time: 4, cost: { wood: 5 },
+      desc: 'Штабель закрытых ящиков возле ангара или штаба.', model: crates, boxes: [[0, 0, 1.28, .39]] },
+    fortLamp: { name: 'Прожектор', r: 1.05, h: 2.86, hp: 55, time: 5, cost: { metal: 5 },
+      desc: 'Невысокая стойка с тёплым фонарём.', model: lamp, boxes: [[0, 0, .28, .28]] },
+    fortTruck: { name: 'Грузовик с тентом', r: 3, h: 2.68, hp: 180, time: 11, cost: { metal: 20, wood: 10 },
+      desc: 'Припаркованный грузовик снабжения.', model: truck, boxes: [[0, 0, 1.31, 2.47]] },
+    fortHelipad: { name: 'Вертолётная площадка', r: 3.5, h: .28, hp: 180, time: 10, cost: { stone: 20, metal: 5 },
+      desc: 'Круглая площадка с белой разметкой и огнями по краям.', model: helipad, boxes: [[1.75, 1.75, .14, .14]] },
+    fortHatch: { name: 'Люк бункера', r: 2.6, h: .66, hp: 250, time: 8, cost: { stone: 20, metal: 15 },
+      desc: 'Декоративный закрытый люк на бетонном основании.', model: hatch, boxes: [[0, 0, .10, .10]] },
+  };
+
+  for (const [type, { model, boxes: _boxes, h, ...def }] of Object.entries(structures)) {
+    BDEF[type] = def;
+    BGEN[type] = g => model(g);
+    BHT[type] = h;
+    SCAF[type] = [0, 0, Math.min(4.8, def.r * 1.28), Math.max(1.1, h * .72)];
+  }
+  BCATS.push(['Форпост', Object.keys(structures)]);
+
+  const existingAccess = industryAccess;
+  industryAccess = function (s, type) {
+    if (Object.hasOwn(structures, type) && !modernEraOk(s, INDUSTRIAL_YEAR))
+      return 'Форпост открывается в Новом времени с 1801 года.';
+    return existingAccess(s, type);
+  };
+
+  const existingBoxes = bBoxes;
+  const compoundBoxes = [
+    [-3.6, -2.3, 3.11, 3.23], [4.16, -3.55, 1.92, 1.52],
+    [-4.42, 3.85, 1.3, 2.49], [0, -6.70, 6.99, .39]
+  ];
+  bBoxes = function (b) {
+    if (b.type === 'milbase') return compoundBoxes;
+    return Object.hasOwn(structures, b.type) ? structures[b.type].boxes : existingBoxes(b);
+  };
+
+  BGEN.milbase = function (g, st) {
+    g.box(0, 0, 0, 16.30, .2, 14, st.base, noBottom);
+    g.box(.24, .20, 0, 3.6, .04, 12.5, asphalt, noBottom);
+    g.grp(-3.6, .20, -2.3, 0, () => hangar(g, false));
+    g.grp(4.16, .20, -3.55, 0, () => headquarters(g, 3.76, 2.82, 1.40));
+    g.grp(2.1, .21, 2.65, 0, () => helipad(g));
+    g.grp(-4.42, .20, 3.85, 0, () => truck(g));
+    g.grp(0, .20, -6.70, 0, () => wall(g, 13.96, 5));
+    for (const x of [-6.7, 5.9]) g.grp(x, .2, 5.5, 0, () => lamp(g));
+    g.grp(-2.66, .20, 5.15, 0, () => {
+      for (const x of [-.15, .15]) {
+        g.box(x, 0, .06, .24, .18, .40, charcoal);
+        g.box(x, .15, 0, .23, .52, .24, darkOlive);
+      }
+      g.box(0, .67, 0, .61, .53, .34, olive, noBottom);
+      for (const x of [-.39, .39]) g.box(x, .65, .014, .18, .52, .23, olive, noBottom);
+      g.sph(0, 1.33, .02, .213, C(0xc6a289), { seg: 8 });
+      g.sph(0, 1.45, .015, .253, darkOlive, { sy: .63, seg: 8 });
+    });
+    kFlag(g, -6.45, .20, 2.86, 5.5, 1);
+  };
+  BHT.milbase = 6.2;
+
+  BGEN.airdef = function (g) {
+    g.cyl(0, 0, 0, 5.0, 5.0, .22, foundation, { seg: 12, noBottom: true });
+    g.box(0, .22, .24, 5.42, .44, 2.72, darkOlive, noBottom);
+    for (let i = 0; i < 4; i++) {
+      const x = (i - 1.5) * 1.13;
+      g.box(x, .66, .69, .97, 2.38, .98, olive, noBottom);
+      g.pyr(x, 3.04, .69, .97, .25, .98, painted, { tw: .68, td: .68 });
+    }
+    g.grp(-2.7, .22, 2.78, -.16, () => sandbags(g));
+    g.grp(2.7, .22, 2.78, .16, () => sandbags(g));
+    g.grp(.1, .22, 3.26, 0, () => sandbags(g));
+    g.box(-2.68, .22, -2.21, 1.95, 1.42, 1.61, olive, noBottom);
+    g.box(-2.68, 1.64, -2.21, 2.13, .14, 1.77, darkOlive);
+    g.box(-2.68, .93, -1.38, 1.24, .32, .06, glass);
+    g.cyl(0, .22, -.50, .49, .36, .64, steel, { seg: 8 });
+    g.cyl(0, .86, -.50, .13, .12, 2.75, charcoal, { seg: 7 });
+  };
+})();
+</script>
+<script id="road-bridge-kit-js">
+(() => {
+  const roads = {
+    trail: {name:'Тропа', width:1.5, color:0xa88b63, rate:.12, style:'dirt'},
+    dirt: {name:'Грунтовая дорога', width:2.4, color:0x9d7d54, rate:.2, style:'dirt'},
+    gravel: {name:'Гравийная дорога', width:2.8, color:0xa09b88, rate:.28, style:'gravel'},
+    roman: {name:'Римская мощёная дорога', width:3.1, color:0xa9a293, rate:.36, style:'paved'},
+    cobble: {name:'Булыжная мостовая', width:3.1, color:0x928b80, rate:.34, style:'paved'},
+    asphalt: {name:'Асфальт в 2 полосы', width:3.8, color:0x40444b, rate:.45, style:'asphalt', modern:true},
+    highway: {name:'Магистраль в 4 полосы', width:6.0, color:0x3e424a, rate:.66, style:'highway', modern:true},
+    rome: {name:'Грунтовая дорога · Рим', width:2.8, color:0xa89575, rate:.23, style:'gravel'},
+    greece: {name:'Грунтовая дорога · Греция', width:2.4, color:0xc6b791, rate:.23, style:'gravel'},
+    egypt: {name:'Песчаная дорога · Египет', width:2.6, color:0xd5ad6b, rate:.22, style:'dirt'},
+    persia: {name:'Царская дорога · Персия', width:2.8, color:0xb28f64, rate:.25, style:'dirt'},
+    han: {name:'Каменная дорога · Хань', width:2.9, color:0x908371, rate:.29, style:'paved'},
+    scythia: {name:'Степная колея · Скифия', width:2.2, color:0x877752, rate:.17, style:'dirt'}
+  };
+  const bridges = {
+    ford: {name:'Брод', max:50, rise:.22, color:0xa6a28f, cost:{stone:1}},
+    timber: {name:'Деревянный мост на сваях', max:80, rise:1.05, color:0x886549, cost:{wood:2}},
+    pontoon: {name:'Понтонный мост', max:90, rise:.58, color:0xa37d56, cost:{wood:2, gold:1}},
+    arch: {name:'Каменный арочный мост', max:115, rise:2.4, color:0x95948a, cost:{stone:3}},
+    rope: {name:'Подвесной верёвочный мост', max:85, rise:.55, color:0xa6855b, cost:{wood:2}},
+    ferry: {name:'Паромная переправа', max:90, rise:.44, color:0x8d6948, cost:{wood:2, gold:1}},
+    truss: {name:'Стальной ферменный мост', max:130, rise:1.8, color:0x525f6a, cost:{metal:2, stone:2}, modern:true},
+    cable: {name:'Вантовый мост', max:160, rise:2.7, color:0xe0e1d9, cost:{metal:3, stone:3}, modern:true},
+    overpass: {name:'Эстакада', max:110, rise:5.6, color:0xabab9f, cost:{stone:2, metal:1}, modern:true}
+  };
+  const shapes = {
+    line: ['Прямой участок', [[0,-1],[0,1]]],
+    turn: ['Поворот', [[0,-1],[0,-.38],[.14,-.14],[.38,0],[1,0]]],
+    cross: ['Перекрёсток', [[0,-1],[0,0],[0,1],[0,0],[-1,0],[0,0],[1,0]]],
+    tee: ['Т-образный перекрёсток', [[-1,0],[0,0],[1,0],[0,0],[0,-1]]],
+    gate: ['Подъезд к воротам города', [[0,-1],[0,.7]]],
+    ramp: ['Подъём к мосту', [[0,-1],[0,1]]],
+    round: ['Кольцевая развязка', null]
+  };
+  const tints = {
+    dark: C(0x594b3b), wood: C(0x89664c), red: C(0x9d443b),
+    stone: C(0x959185), metal: C(0x545b61), white: C(0xdddcc9),
+    paint: C(0xf3eacc), sand: C(0xc9b48d), green: C(0x65824e)
+  };
+  const props = [];
+  function prop(id, name, r, ht, cost, model, modern = false) {
+    const type = 'roadkit_' + id;
+    BDEF[type] = {name, r, hp:150, cost, time:5, desc:'Объект для оформления дорог и городских улиц.'};
+    BGEN[type] = model;
+    BHT[type] = ht;
+    SCAF[type] = [0, 0, r*.65, ht*.8];
+    props.push({type, modern});
+  }
+  const {dark, wood, red, stone, metal, white, paint, sand, green} = tints;
+  prop('boundary', 'Межевой столб', 1.15, 2.1, {stone:8}, g => {
+    g.box(0,0,0,1.25,.32,1.05,stone);
+    g.box(0,.31,0,.67,1.62,.64,white);
+    g.box(0,1.91,0,.79,.17,.77,red);
+  });
+  prop('milestone', 'Мильный камень', 1.2, 2, {stone:9}, g => {
+    g.box(0,0,0,1.18,.25,1.1,stone);
+    g.cyl(0,.25,0,.52,.42,1.44,sand,{seg:8});
+    g.box(0,1.24,.39,.43,.21,.09,white);
+  });
+  prop('well', 'Колодец у дороги', 2.2, 3.45, {wood:13,stone:18}, g => {
+    g.cyl(0,.62,0,.91,.91,.05,C(0x426b79),{seg:12});
+    for (let i=0;i<12;i++) {
+      const a=i*TAU/12;
+      g.grp(Math.sin(a)*1.1,0,Math.cos(a)*1.1,a,()=>g.box(0,0,0,.59,.89,.44,stone));
+    }
+    for (const x of [-1.52,1.52]) g.box(x,0,0,.23,2.55,.23,wood);
+    g.box(0,2.25,0,3.3,.16,.2,dark);
+    g.box(0,2.51,-.48,3.65,.15,1.35,wood,{rx:-.5});
+    g.box(0,2.51,.48,3.65,.15,1.35,wood,{rx:.5});
+    g.cyl(0,1.3,.02,.028,.028,.94,dark,{seg:4});
+  });
+  prop('inn', 'Постоялый двор', 5, 5.5, {wood:32,stone:20}, (g,st) => {
+    g.box(0,0,0,6.5,.32,5,stone);
+    g.box(0,.32,-.2,6,2.7,4.4,st.wall);
+    g.box(0,.4,2.05,.85,1.87,.12,dark);
+    for(const x of [-2,2]) g.box(x,1.64,2.05,1.02,.76,.12,wood);
+    g.box(0,3.04,-1.29,6.65,.24,2.72,st.roof,{rx:-.36});
+    g.box(0,3.04,.89,6.65,.24,2.72,st.roof,{rx:.36});
+    g.box(1.8,2.72,-1.1,.7,1.75,.72,stone);
+    g.box(-2.73,.22,2.18,.32,2.35,.32,dark);
+    g.box(-2.42,2.35,2.18,.95,.44,.18,wood);
+  });
+  prop('guardgate', 'Дорожная застава', 4.8, 4.1, {wood:26,stone:10}, g => {
+    for(const x of [-1.96,1.96]) {
+      g.box(x,0,0,.75,.36,.75,stone);
+      g.box(x,.36,0,.38,2.75,.4,wood);
+      g.box(x,.15,.48,.9,1.4,.72,dark);
+    }
+    g.box(0,3.1,0,5.15,.22,1.45,wood);
+    g.box(0,3.28,.47,5.28,.18,1.28,red,{rx:.42});
+    g.box(0,3.28,-.47,5.28,.18,1.28,red,{rx:-.42});
+  });
+  prop('lamp', 'Дорожный фонарь', 1.25, 5.2, {metal:7,gold:3}, g => {
+    g.cyl(0,0,0,.35,.22,.2,stone,{seg:8});
+    g.cyl(0,.2,0,.12,.09,4.72,metal,{seg:8});
+    g.box(.5,4.73,0,1.2,.12,.15,metal);
+    g.box(1.07,4.58,0,.57,.17,.34,paint);
+    g.box(1.07,4.75,0,.63,.09,.38,dark);
+  }, true);
+  prop('signal', 'Светофор', 1.25, 4.4, {metal:7,gold:4}, g => {
+    g.cyl(0,0,0,.28,.28,.23,stone,{seg:8});
+    g.cyl(0,.23,0,.10,.10,3.42,metal,{seg:8});
+    g.box(0,3.02,.13,.53,1.32,.3,dark);
+    [0x479258,0xe5b54e,0xbf493a].forEach((c,i)=>g.sph(0,3.27+i*.37,.32,.14,C(c),{seg:6,ez:.44}));
+  }, true);
+  prop('sign', 'Дорожный знак', 1.05, 3, {metal:4,gold:2}, g => {
+    g.cyl(0,0,0,.085,.085,2.65,metal,{seg:8});
+    g.cyl(0,2.52,.07,.49,.49,.1,C(0x365e84),{rz:0,rx:Math.PI/2,seg:12});
+    g.box(0,2.45,.2,.19,.16,.06,white);
+  }, true);
+  prop('stop', 'Остановка', 3.8, 3.4, {metal:15,wood:10,gold:8}, g => {
+    const tinted = C(0x83a6b0);
+    g.box(0,0,0,5.45,.18,3.1,stone);
+    g.box(0,.18,-1.14,4.92,2.62,.13,tinted);
+    for(const x of [-2.42,2.42]){
+      g.box(x,.19,-1.15,.16,2.72,.17,metal);
+      g.box(x,.19,1.18,.16,2.73,.17,metal);
+    }
+    g.box(0,2.9,0,5.64,.24,3.07,metal);
+    g.box(0,.66,-.79,3.8,.22,.61,wood);
+    for (const x of [-1.48,1.48]) g.box(x,.16,-.79,.17,.51,.39,metal);
+  }, true);
+  const tabId = BCATS.push(['Дороги и мосты', props.map(p=>p.type)]) - 1;
+
+  const terrainHeight = heightAt;
+  const bankPart = new Map();
+  let navArray = null, drawDeckHeights = false, loading = null;
+
+  // Navigation cells on the deck augment dry-land routes only.
+  function resetDecks() {
+    if (navArray !== W.pass) { bankPart.clear(); navArray = W.pass; }
+  }
+  function getDeck(rd) { return rd.kit?.deck; }
+  function deckCells(deck) {
+    const [ax,az,bx,bz] = deck;
+    const count = Math.round(Math.hypot(bx-ax,bz-az)/NAVC);
+    return Array.from({length:count+1}, (_,i)=>navIdx(lerp(ax,bx,i/count),lerp(az,bz,i/count)));
+  }
+  function surfaceHeight(deck, style, t) {
+    const shore = lerp(deck[4],deck[5],t);
+    const wave = Math.sin(Math.PI*t)**2;
+    if (style === 'ford') return lerp(shore,.24,wave);
+    if (style === 'overpass' || style === 'rope') return shore+bridges[style].rise*wave;
+    return Math.max(shore,.65)+bridges[style].rise*wave;
+  }
+  function deckAt(x,z) {
+    if (navArray !== W.pass || !bankPart.size) return null;
+    const entry = bankPart.get(navIdx(x,z));
+    if (!entry) return null;
+    const [ax,az,bx,bz] = entry.deck;
+    const dx=bx-ax,dz=bz-az;
+    const t=((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz);
+    if(t < 0 || t > 1) return null;
+    return surfaceHeight(entry.deck,entry.rd.kit.id,t);
+  }
+  function attachDeck(rd) {
+    const deck=getDeck(rd);
+    if (!deck) return;
+    resetDecks();
+    const cells=deckCells(deck), comp=W.comp[cells[0]];
+    if (comp < 0 || comp !== W.comp[cells.at(-1)] || cells.some(c=>bankPart.has(c))) return;
+    for (const c of cells) {
+      bankPart.set(c, {rd,deck,pass:W.pass[c],comp:W.comp[c],cost:W.ncost[c]});
+      if (!W.pass[c]) { W.pass[c]=1; W.comp[c]=comp; W.ncost[c]=1.25; }
+    }
+  }
+  function detachDeck(rd) {
+    resetDecks();
+    for (const [c, old] of bankPart) if (old.rd===rd) {
+      W.pass[c]=old.pass; W.comp[c]=old.comp; W.ncost[c]=old.cost; bankPart.delete(c);
+    }
+  }
+  heightAt = function(x,z,surface) {
+    const h = terrainHeight(x,z,surface);
+    if (drawDeckHeights && !surface) return Math.max(h,deckAt(x,z)??h);
+    return h;
+  };
+  const onDeck = fn => function() {
+    if (navArray!==W.pass || !bankPart.size) return fn.apply(this,arguments);
+    const before=drawDeckHeights;
+    drawDeckHeights=true;
+    try { return fn.apply(this,arguments); } finally { drawDeckHeights=before; }
+  };
+  peopleUpdate = onDeck(peopleUpdate);
+  carDraw = onDeck(carDraw);
+  drawSettler = onDeck(drawSettler);
+  drawFarmUnits = onDeck(drawFarmUnits);
+  drawFieldUnits = onDeck(drawFieldUnits);
+  armyDraw = onDeck(armyDraw);
+  pickGround = onDeck(pickGround);
+  const troopSlot=slot;
+  slot=function(sq,i) {
+    const p=troopSlot(sq,i);
+    const entry=navArray===W.pass&&bankPart.get(navIdx(sq.x,sq.z));
+    if (!entry || sq.post || deckAt(sq.x,sq.z)==null) return p;
+    const [ax,az,bx,bz]=entry.deck;
+    if (ax===bx) p[0]=clamp(p[0],ax-4.3,ax+4.3);
+    else if (az===bz) p[1]=clamp(p[1],az-4.3,az+4.3);
+    return p;
+  };
+
+  const bad = why => ({ok:false,why,pts:null,len:0,cost:{}});
+  const isModern = s => modernEraOk(s,1801);
+  const unlocked = (s, d) => !d.modern || isModern(s);
+  function straightPoints(ax,az,bx,bz) {
+    const count=Math.ceil(Math.hypot(bx-ax,bz-az)/RSTEP);
+    return Array.from({length:count+1},(_,i)=>[lerp(ax,bx,i/count),lerp(az,bz,i/count)]);
+  }
+  function permissiveBank(s,x,z) {
+    const r=W.regions[regionAt(x,z)];
+    return r && (r.owner===s.id || r.owner===-1);
+  }
+  function bridgePlan(s,id,ax,az,bx,bz) {
+    const d=bridges[id];
+    if (!unlocked(s,d)) return bad('Этот проект откроется с 1801 года');
+    const horizontal=Math.abs(bx-ax)>=Math.abs(bz-az);
+    const shift=horizontal?Math.abs(az-bz):Math.abs(ax-bx);
+    if (shift > 24) return bad('Укажи берега вдоль одной оси карты');
+    const mid=horizontal?(az+bz)*.5:(ax+bx)*.5;
+    const n=Math.floor((mid+HALF)/NAVC);
+    const ref=-HALF+(n+.5)*NAVC;
+    const first=navIdx(horizontal?ax:ref,horizontal?ref:az);
+    const last=navIdx(horizontal?bx:ref,horizontal?ref:bz);
+    ax=navCX(first); az=navCZ(first); bx=navCX(last); bz=navCZ(last);
+    const len=Math.hypot(bx-ax,bz-az);
+    if(len<20 || len>d.max) return bad('Длина переправы от 20 до '+d.max+' м');
+    if ([ax,az,bx,bz].some(v=>Math.abs(v)>HALF-15)) return bad('Слишком близко к краю карты');
+    resetDecks();
+    const h0=terrainHeight(ax,az), h1=terrainHeight(bx,bz);
+    if (!W.pass[first] || !W.pass[last] || h0<.55 || h1<.55) return bad('Оба конца должны стоять на суше. Подвинь их от кромки воды');
+    if (W.comp[first]!==W.comp[last]) return bad('Переправа строится через реки и ущелья в пределах одного материка');
+    if (Math.abs(h0-h1)>Math.max(5,len*.20)) return bad('Слишком большой перепад высот между концами');
+    const deck=[ax,az,bx,bz,h0,h1], cells=deckCells(deck);
+    if(cells.some(c=>bankPart.has(c))) return bad('Здесь уже есть переправа');
+    const pts=straightPoints(ax,az,bx,bz), heights=pts.map(p=>terrainHeight(...p));
+    const water=heights.some(h=>h<.30);
+    if (id==='ford' && Math.min(...heights)<-1.35) return bad('Для брода здесь слишком глубоко');
+    if (id==='overpass' && !cells.every(c=>W.pass[c])) return bad('Эстакаде нужен сухопутный участок');
+    if (id!=='overpass' && !water && !(id==='rope' && Math.min(...heights.slice(1,-1))<Math.min(h0,h1)-4)) return bad('Укажи берега по разные стороны воды или ущелья');
+    if (!pts.every(p=>permissiveBank(s,...p))) return bad('Через чужую землю нельзя проложить переправу');
+    for (const b of G.buildings) {
+      const [x,z,r]=wkObst(b,true);
+      if(segDist(x,z,ax,az,bx,bz)<r+5.5) return bad('На участке мешает постройка');
+    }
+    const cost={gold:Math.max(4,Math.round(len/5))};
+    for (const [key, rate] of Object.entries(d.cost)) cost[key]=(cost[key]||0)+Math.ceil(len*rate/3);
+    return {ok:true,pts,len,cost,kit:{id,deck}};
+  }
+  const nativeRoadPlan=roadPlan;
+  function roadPattern(s,id,form,ax,az,bx,bz) {
+    const d=roads[id];
+    if(!unlocked(s,d)) return bad('Этот проект откроется с 1801 года');
+    if(form==='line') {
+      const p=nativeRoadPlan(s,ax,az,bx,bz);
+      if(p.ok) {
+        p.cost={gold:Math.max(1,Math.round(p.len*d.rate))};
+        if(d.style==='paved' || d.modern) p.cost.stone=Math.ceil(p.len*.25);
+        p.kit={id,form};
+      }
+      return p;
+    }
+    const angle=Math.atan2(bx-ax,bz-az), sn=Math.sin(angle), cs=Math.cos(angle);
+    const span=clamp(Math.hypot(bx-ax,bz-az),form==='round'?14:9,form==='round'?20:30);
+    const circle=Array.from({length:13},(_,i)=>[Math.sin(i*TAU/12)*.68,Math.cos(i*TAU/12)*.68]);
+    const template=shapes[form][1] || [[0,1],...circle,[0,1]];
+    const path=template.map(([x,z])=>[ax+span*(x*cs+z*sn),az+span*(-x*sn+z*cs)]);
+    for (const p of path) {
+      const n=roadNode(p[0],p[1],2.4);
+      if (n>=0) { p[0]=RN.x[n]; p[1]=RN.z[n]; }
+    }
+    let pts=[path[0]], len=0;
+    for (let i=1;i<path.length;i++) {
+      const a=path[i-1],b=path[i],d=Math.hypot(b[0]-a[0],b[1]-a[1]);
+      if(d<.1) continue;
+      pts=pts.concat(straightPoints(...a,...b).slice(1)); len+=d;
+    }
+    if (!pts.every(p=>Math.abs(p[0])<HALF-12&&Math.abs(p[1])<HALF-12&&isPass(...p)&&terrainHeight(...p)>.5&&permissiveBank(s,...p)))
+      return bad('Для такого участка нужна свободная суша');
+    for (const b of G.buildings) {
+      const [x,z,r]=wkObst(b,true);
+      if(pts.some(p=>dist2(...p,x,z)<(r+d.width*.75)**2)) return bad('На участке мешает постройка');
+    }
+    const cost={gold:Math.max(3,Math.ceil(len*d.rate))};
+    if(d.style==='paved'||d.modern)cost.stone=Math.ceil(len*.25);
+    const kit={id,form};
+    if(form==='round') kit.center=[ax,az];
+    return {ok:true,pts,len,cost,kit};
+  }
+  roadPlan=function(s,ax,az,bx,bz) {
+    const mode=UI.road?.kit;
+    if (s!==G.player || !mode) return nativeRoadPlan(s,ax,az,bx,bz);
+    return Object.hasOwn(bridges,mode.id)?bridgePlan(s,mode.id,ax,az,bx,bz):roadPattern(s,mode.id,mode.form,ax,az,bx,bz);
+  };
+  function metadata(k) {
+    if (!k) return null;
+    if (Object.hasOwn(roads,k.id) && Object.hasOwn(shapes,k.form)) {
+      const kit={id:k.id,form:k.form};
+      if (k.form==='round'&&Array.isArray(k.center)&&k.center.length===2&&k.center.every(Number.isFinite)) kit.center=k.center.slice();
+      return kit;
+    }
+    if (!Object.hasOwn(bridges,k.id) || !Array.isArray(k.deck) || k.deck.length!==6 || !k.deck.every(Number.isFinite)) return null;
+    const [ax,az,bx,bz]=k.deck;
+    const span=Math.hypot(ax-bx,az-bz);
+    if ((ax!==bx && az!==bz) || span>bridges[k.id].max || span<20) return null;
+    return {id:k.id,deck:k.deck.slice()};
+  }
+  const add0=roadAdd0;
+  roadAdd0=function(s,p) {
+    const kit=p&&metadata(p.kit||loading?.get(p.pts));
+    const rd=add0(s,p);
+    if(rd&&kit) {
+      rd.kit=kit; attachDeck(rd);
+      const width=kit.deck?5.35:roads[kit.id].width;
+      if(width>2.7)for(const p of rd.pts)removeTrees(...p,width);
+    }
+    return rd;
+  };
+  function deckOccupied(rd) {
+    const [ax,az,bx,bz]=getDeck(rd);
+    const by=(x,z)=>Number.isFinite(x)&&Number.isFinite(z)&&segDist(x,z,ax,az,bx,bz)<5.5;
+    const on=c=>c&&by(c.x,c.z);
+    const x=(ax+bx)*.5,z=(az+bz)*.5;
+    const uses=c=>{
+      if(!c) return false;
+      if(on(c)) return true;
+      let px=c.x,pz=c.z;
+      for(let i=c.pi||0;i<(c.path?.length||0);i++){
+        const p=c.path[i];
+        if(segDist(x,z,px,pz,p[0],p[1])<5) return true;
+        [px,pz]=p;
+      }
+      return false;
+    };
+    return G.squads.some(s=>!s.boarded&&(uses(s)||s.men.some(on))) ||
+      uses(G.settler) || G.states.some(s=>uses(s.pioneer)||s.car?.some(uses)||s.walk?.some(uses)) ||
+      G.travel?.operations?.units?.some(u=>!FIELD_TYPES[u.kind]?.air&&uses(u));
+  }
+  const remove0=roadRemove;
+  roadRemove=function(rd) {
+    if (getDeck(rd)&&deckOccupied(rd)) { toast('Сначала освободи переправу','bad'); return; }
+    remove0(rd);
+    detachDeck(rd);
+  };
+  const save0=saveData;
+  saveData=function() {
+    const d=save0.apply(this,arguments);
+    d.roads.forEach((r,i)=>{ const kit=G.roads[i].kit; if(kit) r.kit=kit; });
+    return d;
+  };
+  const load0=loadGame;
+  loadGame=function(d) {
+    loading=new Map((d.roads||[]).filter(r=>r.kit).map(r=>[r.pts,r.kit]));
+    try { return load0.apply(this,arguments); } finally { loading=null; }
+  };
+
+  function beam(g, x0,y0,z0, x1,y1,z1, width, color) {
+    const dx=x1-x0,dy=y1-y0,dz=z1-z0, len=Math.hypot(dx,dy,dz);
+    if (len<.01) return;
+    g.grp(x0,y0,z0,Math.atan2(dx,dz),()=>{
+      g.cyl(0,0,0,width,width,len,color,{seg:4,rx:Math.atan2(Math.hypot(dx,dz),dy)});
+    });
+  }
+  function bridgeMesh(rd) {
+    const [ax,az,bx,bz]=getDeck(rd), id=rd.kit.id, d=bridges[id], g=new Geo();
+    const length=Math.hypot(bx-ax,bz-az), angle=Math.atan2(bx-ax,bz-az), steps=Math.ceil(length/2);
+    const top=id==='ford'?sand:id==='cable'||id==='overpass'||id==='truss'?C(0x51565b):C(d.color);
+    const edge=C(d.color), half=5.15;
+    const floor=z=>surfaceHeight(rd.kit.deck,id,clamp(z/length,0,1));
+    g.grp(ax,0,az,angle,()=>{
+      for(let i=0;i<steps;i++){
+        const a=i*length/steps,b=(i+1)*length/steps, y0=floor(a), y1=floor(b);
+        const thickness=id==='ford'?.22:.50;
+        g.quad([-half,y0,a],[-half,y1,b],[half,y1,b],[half,y0,a],top,0,[0,y0-thickness,a]);
+        for (const side of [-1,1]) {
+          const x=half*side;
+          g.quad([x,y0,a],[x,y1,b],[x,y1-thickness,b],[x,y0-thickness,a],edge,0,[0,y0,a]);
+          if(id==='truss'||id==='cable'||id==='overpass') {
+            if(i%3!==2) g.box(0,(y0+y1)*.5+.045,(a+b)*.5,.13,.026,(b-a)*.79,paint,{rx:-Math.atan2(y1-y0,b-a)});
+            if(id==='truss') g.box(side*.98,(y0+y1)*.5+.06,(a+b)*.5,.11,.06,(b-a),metal);
+          }
+        }
+      }
+      const bays=Math.max(3,Math.ceil(length/7));
+      for(const side of [-1,1]){
+        const x=side*(half-.19);
+        for(let i=0;i<=bays;i++){
+          const z=i*length/bays,y=floor(z);
+          if (id!=='ford'&&id!=='ferry') g.box(x,y,z,.22,.92,.25,edge);
+          if (i===bays||id==='ford'||id==='ferry') continue;
+          const z1=(i+1)*length/bays,y1=floor(z1);
+          beam(g,x,y+.78,z,x,y1+.78,z1,.10,edge);
+          if(id==='truss'){
+            beam(g,x,y+4.0,z,x,y1+4.0,z1,.22,edge);
+            beam(g,x,y+.1,z,x,y+4.0,z,.18,edge);
+            beam(g,x,y+.15,z,x,y1+4,z1,.15,edge);
+          }
+        }
+        if(id==='cable'){
+          const z=length*.5,y=floor(z),tall=Math.min(15,length*.19);
+          g.box(x,y-.65,z,.62,tall+.65,.86,white);
+          for(const v of [-1,1]) for(let k=1;k<=5;k++){
+            const to=z+v*k*length*.085;
+            beam(g,x,y+tall*(.58+k*.075),z,x,floor(to)+.12,to,.075,white);
+          }
+        }
+      }
+      if(id==='truss')for(let i=0;i<=bays;i++){
+        const z=i*length/bays,y=floor(z)+4;
+        beam(g,-half+.19,y,z,half-.19,y,z,.15,edge);
+      }
+      if(id==='arch'){
+        const span=length/3;
+        for(let a=0;a<3;a++){
+          for(let i=0;i<10;i++){
+            const slice=j=>{ const p=j/10,z=(a+p)*span; return [z,floor(z)-.56,Math.min(floor(z)-.62,-.8+Math.sin(Math.PI*p)*(floor(z)+.15))]; };
+            const [z0,top0,y0]=slice(i),[z1,top1,y1]=slice(i+1);
+            for(const side of [-1,1]){
+              const x=half*side;
+              g.quad([x,top0,z0],[x,top1,z1],[x,y1,z1],[x,y0,z0],i%2?edge:stone,0,[0,top0,z0]);
+            }
+            g.quad([-half,y0,z0],[half,y0,z0],[half,y1,z1],[-half,y1,z1],stone,0,[0,top0,z0]);
+          }
+        }
+      }
+      if(id==='timber'||id==='overpass'){
+        for(let i=1;i<bays;i+=2){
+          const z=i*length/bays, worldX=lerp(ax,bx,z/length),worldZ=lerp(az,bz,z/length),base=terrainHeight(worldX,worldZ)-.15;
+          for(const x of [-3.55,3.55])g.box(x,base,z,id==='timber'?.44:1.15,Math.max(.16,floor(z)-base),.7,edge);
+        }
+      }
+      if(id==='pontoon'||id==='ferry'){
+        const count=id==='pontoon'?Math.max(2,Math.floor(length/6)):1;
+        for(let i=0;i<count;i++){
+          const z=(i+.5)*length/count;
+          for(const x of [-3.88,3.88])g.sph(x,-.12,z,1.31,wood,{seg:7,sy:.37,ez:1.75});
+        }
+      }
+      if(id==='ferry') {
+        const z=length*.5,y=floor(z);
+        g.box(0,y-.3,z,10.7,.45,5.8,wood);
+        g.box(4.0,y,z,1.18,1.3,1.55,dark);
+        beam(g,half-.18,floor(0)+.76,0,half-.18,floor(length)+.76,length,.06,dark);
+      }
+      if(id==='rope'){
+        for(const z of [0,length])for(const x of [-4.9,4.9])g.box(x,floor(z),z,.48,1.8,.48,wood);
+        for(const x of [-4.9,4.9]) for(let i=0;i<bays;i++){
+          const z=i*length/bays,b=(i+1)*length/bays;
+          beam(g,x,floor(z)+1.28,z,x,floor(b)+1.28,b,.09,dark);
+        }
+      }
+    });
+    return g.out();
+  }
+  function stripMesh(rd) {
+    const d=roads[rd.kit.id], g=new Geo(), P=rd.pts, emitted=new Set();
+    rd.br=[];
+    const half=d.width;
+    const color=C(d.color);
+    const normal=[0,1,0];
+    const cut=d.style==='gravel'||d.style==='dirt'? .60:1;
+    for(let i=1;i<P.length;i++) {
+      const a=P[i-1],b=P[i],step=Math.hypot(b[0]-a[0],b[1]-a[1]);
+      if(step<.01) continue;
+      const keys=[a,b].map(p=>p.map(v=>Math.round(v*100)).join(',')).sort().join('|');
+      if(emitted.has(keys)) continue;
+      emitted.add(keys);
+      if(terrainHeight(...a)<.4||terrainHeight(...b)<.4) {
+        const p=terrainHeight(...b)<.4?b:a;
+        rd.br.push([p[0],p[1],Math.atan2(b[0]-a[0],b[1]-a[1])]); continue;
+      }
+      const ux=(b[0]-a[0])/step,uz=(b[1]-a[1])/step;
+      const pt=(along,side,h=.075)=>{
+        const x=a[0]+ux*along-uz*side,z=a[1]+uz*along+ux*side;
+        return [x,terrainHeight(x,z)+h,z];
+      };
+      const lane=(left,right,from,to,col,h)=>g.quad(pt(from,left,h),pt(to,left,h),pt(to,right,h),pt(from,right,h),col);
+      for (const [left,right] of [[-half,-half*.7],[-half*.7,half*.7],[half*.7,half]]) {
+        const lo=Math.abs(left)>=half-.01?cut:1,hi=Math.abs(right)>=half-.01?cut:1;
+        const A=pt(-.085,left),B=pt(step+.085,left),C0=pt(step+.085,right),D=pt(-.085,right);
+        g.triV(A,B,C0,normal,normal,normal,color,color,color,[lo,lo,hi]);
+        g.triV(A,C0,D,normal,normal,normal,color,color,color,[lo,hi,hi]);
+      }
+      if(d.style==='dirt'){
+        const tracks=C(rd.kit.id==='scythia'?0xa59258:0x8e6d48);
+        for(const o of [-half*.44,half*.44]) lane(o-.14,o+.14,0,step,tracks,.097);
+        if(i%9===0&&rd.kit.id==='dirt'&&step>1)lane(-.27,.56,step*.22,step*.68,C(0x877d62),.096);
+      }
+      if(d.style==='paved'){
+        const block=C(rd.kit.id==='han'?0xb09b7a:0xc6baa4);
+        lane(-half*.85,half*.85,step*.22,step*.29,block,.101);
+        for(const o of [-half*.87,half*.87])lane(o-.14,o+.14,0,step,block,.101);
+      }
+      if(d.style==='asphalt'||d.style==='highway'){
+        for(const o of [-half*.83,half*.83]) lane(o-.06,o+.06,0,step,paint,.101);
+        for(const o of (d.style==='highway'?[-half*.42,half*.42]:[0]))lane(o-.06,o+.06,step*.12,step*.65,paint,.105);
+        if(d.style==='highway')lane(-.16,.16,0,step,sand,.103);
+      }
+    }
+    if(rd.kit.center){
+      const center=rd.kit.center;
+      g.cyl(center[0],terrainHeight(...center),center[1],3.1,3.0,.22,stone,{seg:12});
+      g.cyl(center[0],terrainHeight(...center)+.21,center[1],2.85,2.72,.24,green,{seg:12});
+      for(let i=0;i<7;i++){const a=i*TAU/7;g.sph(center[0]+Math.sin(a)*1.65,terrainHeight(...center)+.4,center[1]+Math.cos(a)*1.65,.29,i%2?red:paint,{seg:6,sy:.62});}
+    }
+    return g.out();
+  }
+  const roadGeo0=roadGeo;
+  roadGeo=function(rd) {
+    if(!rd.kit) return roadGeo0(rd);
+    if (getDeck(rd)) { rd.br=[]; return bridgeMesh(rd); }
+    return stripMesh(rd);
+  };
+  const grass0=grassUpdate;
+  grassUpdate=function() {
+    grass0.apply(this,arguments);
+    if(!G.started || DUEL.mapOn || !bankPart.size) return;
+    for (const rd of G.roads) if(getDeck(rd)) {
+      const i=FR.decals.indexOf(rd.batch);
+      if (i>=0) { FR.decals.splice(i,1); FR.extra.push(rd.batch); }
+    }
+  };
+
+  function buildCards(s) {
+    const item=(id,d)=>'<button class="card'+(unlocked(s,d)?'':' dis')+'" data-act="roadkitStart:'+id+'"'+(unlocked(s,d)?'':' disabled')+'><h3>'+esc(d.name)+'</h3></button>';
+    const details=props.map(p=>{
+      const d=BDEF[p.type], ok=!p.modern || isModern(s);
+      return '<button class="card'+(ok?'':' dis')+'" data-act="build:'+p.type+'"'+(ok?'':' disabled')+'><h3>'+esc(d.name)+'</h3><span class="cost">'+costHtml(s,costOf(s,p.type))+'</span></button>';
+    }).join('');
+    return '<div class="cats seg">'+BCATS.map((c,i)=>'<button data-act="cat:'+i+'" class="'+(i===UI.cat?'on':'')+'">'+esc(c[0])+'</button>').join('')+'</div>'+
+      '<h2>Дороги</h2><div class="cards">'+Object.entries(roads).map(([id,d])=>item(id,d)).join('')+'</div>'+
+      '<h2>Переправы</h2><p class="sub">Укажи два берега вдоль одной оси карты. Современные проекты открываются с 1801 года.</p><div class="cards">'+Object.entries(bridges).map(([id,d])=>item(id,d)).join('')+'</div>'+
+      '<h2>Дорожные объекты</h2><div class="cards">'+details+'</div>';
+  }
+  function placementPanel(s,r) {
+    const {id,form}=r.kit, bridge=bridges[id], d=bridge||roads[id], p=r.plan;
+    const msg=!r.a?(bridge?'Укажи первый берег или начало эстакады':'Укажи начало участка') : !p?(bridge?'Укажи противоположный берег':'Укажи направление и длину участка') : p.ok?'Длина участка '+Math.round(p.len)+' м.':p.why;
+    const formats=bridge?'':'<div class="cats seg" aria-label="Форма дороги">'+Object.entries(shapes).filter(([k])=>k!=='round'||d.modern).map(([k,[label]])=>'<button data-act="roadkitForm:'+k+'" class="'+(k===form?'on':'')+'">'+esc(label)+'</button>').join('')+'</div>';
+    return '<h2>'+esc(d.name)+'</h2>'+formats+'<div class="row"><div class="grow"><p class="sub">'+esc(msg)+'</p>'+(p?.ok?'<span class="cost">'+costHtml(s,p.cost)+'</span>':'')+'</div>'+
+      (r.a?'<button class="btn ghost" data-act="rnew">Заново</button>':'')+
+      '<button class="btn" data-act="rok"'+(p?.ok&&r.b?'':' disabled')+'>Построить</button><button class="btn ghost" data-act="cancel">Готово</button></div>';
+  }
+  const panel0=UI.panelHtml;
+  const available=()=>!DUEL.mapOn&&G.player&&G.started;
+  UI.panelHtml=function() {
+    if(available()) {
+      if(UI.road?.kit) return placementPanel(G.player,UI.road);
+      if(UI.selRoad?.kit){
+        const r=UI.selRoad,d=(bridges[r.kit.id]||roads[r.kit.id]);
+        return '<div class="row"><div class="grow"><h2>'+esc(d.name)+'</h2><p class="sub">'+Math.round(r.len)+' м. '+(getDeck(r)?'Доступна сухопутным отрядам и перевозчикам.':'Соединяется с существующей дорожной сетью.')+'</p></div>'+
+          (r.owner===G.player.id?'<button class="btn ghost" data-act="rdel">Убрать</button>':'')+'<button class="btn ghost" data-act="close">Закрыть</button></div>';
+      }
+      const plain=!UI.place&&!UI.road&&!UI.selRoad&&!UI.sel&&!UI.civilFocus&&!UI.selW&&!UI.selSq.length&&!UI.selShips.length&&!UI.fieldMode&&UI.fieldUnit==null&&UI.fieldFacility==null;
+      if(plain&&UI.tab==='build'&&BCATS[UI.cat]===BCATS[tabId]) return buildCards(G.player);
+    }
+    return panel0.apply(this,arguments);
+  };
+  const startPlacement=UI.act;
+  UI.act=function(action) {
+    const [kind,id]=action.split(':');
+    if (kind==='roadkitStart' && available() && !turnLocked()) {
+      const d=roads[id]||bridges[id];
+      if (!d || !unlocked(G.player,d)) return;
+      UI.startRoad();
+      UI.road.kit={id,form:'line'};
+      UI.render(true);
+      return;
+    }
+    if (kind==='roadkitForm' && UI.road?.kit && Object.hasOwn(shapes,id)) {
+      const r=UI.road;
+      r.kit.form=id;r.b=null;r.plan=null;r.hx=1e9;
+      UI.render(true);
+      return;
+    }
+    if (kind==='rdel'&&UI.selRoad?.kit) {
+      const r=UI.selRoad;
+      if(r.owner!==G.player.id) return;
+      if(getDeck(r)&&deckOccupied(r)) { toast('Сначала освободи переправу','bad'); return; }
+    }
+    return startPlacement.apply(this,arguments);
+  };
+})();
+</script>
 <script id="tank-grid-trial-js">
 
 // Демонстрационная партия открывается из штатного пункта «Испытания → Постройки».
@@ -25043,7 +26232,7 @@ function focusTankGridTrial(){
       (drone?worksButton('unit:'+drone.id,'Дрон «Искра»'):'')+
       (fieldUnitById(trial.jet)?worksButton('unit:'+trial.jet,'Истребитель'):'')+
       (G.squads.some(q=>q.id===G.travel.uniformTrial&&q.o===s.id&&q.men.length&&!q.boarded)?worksButton('uniformTrial','Посмотреть солдат'):'')+
-      (station?worksButton('building:'+station.id,'К электростанции'):'')+'<button type="button" class="btn sm ghost" data-asset-sheets>Эскизы войск</button></div></section>'+main;
+      (station?worksButton('building:'+station.id,'К электростанции'):'')+'<button type="button" class="btn sm ghost" data-asset-sheets>Эскизы</button></div></section>'+main;
   };
 }
 
@@ -25054,7 +26243,7 @@ if (DUEL.gpu) {
 }
 
 </script>
-<script type="application/json" id="asset-reference-data">[{"id": 1, "name": "Россия", "era": "Индустриальная эпоха", "image": "sketch-01.jpg"}, {"id": 2, "name": "Великобритания", "era": "Индустриальная эпоха", "image": "sketch-02.jpg"}, {"id": 3, "name": "Франция", "era": "Индустриальная эпоха", "image": "sketch-03.jpg"}, {"id": 4, "name": "Германия", "era": "Индустриальная эпоха", "image": "sketch-04.jpg"}, {"id": 5, "name": "США", "era": "Индустриальная эпоха", "image": "sketch-05.jpg"}, {"id": 6, "name": "Япония", "era": "Индустриальная эпоха", "image": "sketch-06.jpg"}, {"id": 7, "name": "Италия", "era": "Индустриальная эпоха", "image": "sketch-07.jpg"}, {"id": 8, "name": "Австро-Венгрия", "era": "Индустриальная эпоха", "image": "sketch-08.jpg"}, {"id": 9, "name": "Османская империя", "era": "Индустриальная эпоха", "image": "sketch-09.jpg"}, {"id": 10, "name": "Китай", "era": "Индустриальная эпоха", "image": "sketch-10.jpg"}, {"id": 11, "name": "Испания", "era": "Индустриальная эпоха", "image": "sketch-11.jpg"}, {"id": 12, "name": "Швеция", "era": "Индустриальная эпоха", "image": "sketch-12.jpg"}, {"id": 13, "name": "Россия", "era": "Современность", "image": "sketch-13.jpg"}, {"id": 14, "name": "Великобритания", "era": "Современность", "image": "sketch-14.jpg"}, {"id": 15, "name": "Франция", "era": "Современность", "image": "sketch-15.jpg"}, {"id": 16, "name": "Германия", "era": "Современность", "image": "sketch-16.jpg"}, {"id": 17, "name": "США", "era": "Современность", "image": "sketch-17.jpg"}, {"id": 18, "name": "Япония", "era": "Современность", "image": "sketch-18.jpg"}, {"id": 19, "name": "Италия", "era": "Современность", "image": "sketch-19.jpg"}, {"id": 20, "name": "Австрия", "era": "Современность", "image": "sketch-20.jpg"}, {"id": 21, "name": "Турция", "era": "Современность", "image": "sketch-21.jpg"}, {"id": 22, "name": "КНР", "era": "Современность", "image": "sketch-22.jpg"}, {"id": 23, "name": "Испания", "era": "Современность", "image": "sketch-23.jpg"}, {"id": 24, "name": "Швеция", "era": "Современность", "image": "sketch-24.jpg"}]</script>
+<script type="application/json" id="asset-reference-data">[{"id": 1, "name": "Россия", "era": "Индустриальная эпоха", "image": "sketch-01.jpg"}, {"id": 2, "name": "Великобритания", "era": "Индустриальная эпоха", "image": "sketch-02.jpg"}, {"id": 3, "name": "Франция", "era": "Индустриальная эпоха", "image": "sketch-03.jpg"}, {"id": 4, "name": "Германия", "era": "Индустриальная эпоха", "image": "sketch-04.jpg"}, {"id": 5, "name": "США", "era": "Индустриальная эпоха", "image": "sketch-05.jpg"}, {"id": 6, "name": "Япония", "era": "Индустриальная эпоха", "image": "sketch-06.jpg"}, {"id": 7, "name": "Италия", "era": "Индустриальная эпоха", "image": "sketch-07.jpg"}, {"id": 8, "name": "Австро-Венгрия", "era": "Индустриальная эпоха", "image": "sketch-08.jpg"}, {"id": 9, "name": "Османская империя", "era": "Индустриальная эпоха", "image": "sketch-09.jpg"}, {"id": 10, "name": "Китай", "era": "Индустриальная эпоха", "image": "sketch-10.jpg"}, {"id": 11, "name": "Испания", "era": "Индустриальная эпоха", "image": "sketch-11.jpg"}, {"id": 12, "name": "Швеция", "era": "Индустриальная эпоха", "image": "sketch-12.jpg"}, {"id": 13, "name": "Россия", "era": "Современность", "image": "sketch-13.jpg"}, {"id": 14, "name": "Великобритания", "era": "Современность", "image": "sketch-14.jpg"}, {"id": 15, "name": "Франция", "era": "Современность", "image": "sketch-15.jpg"}, {"id": 16, "name": "Германия", "era": "Современность", "image": "sketch-16.jpg"}, {"id": 17, "name": "США", "era": "Современность", "image": "sketch-17.jpg"}, {"id": 18, "name": "Япония", "era": "Современность", "image": "sketch-18.jpg"}, {"id": 19, "name": "Италия", "era": "Современность", "image": "sketch-19.jpg"}, {"id": 20, "name": "Австрия", "era": "Современность", "image": "sketch-20.jpg"}, {"id": 21, "name": "Турция", "era": "Современность", "image": "sketch-21.jpg"}, {"id": 22, "name": "КНР", "era": "Современность", "image": "sketch-22.jpg"}, {"id": 23, "name": "Испания", "era": "Современность", "image": "sketch-23.jpg"}, {"id": 24, "name": "Швеция", "era": "Современность", "image": "sketch-24.jpg"}, {"id": 25, "name": "Аэропорт · Современность", "era": "Инфраструктура", "image": "sketch-25.jpg"}, {"id": 26, "name": "Военная база · Современность", "era": "Инфраструктура", "image": "sketch-26.jpg"}, {"id": 27, "name": "Дороги и мосты · Современность", "era": "Инфраструктура", "image": "sketch-27.jpg"}, {"id": 28, "name": "Дороги и мосты · Античность", "era": "Инфраструктура", "image": "sketch-28.jpg"}, {"id": 29, "name": "Форпост · Игровой стиль", "era": "Инфраструктура", "image": "sketch-29.jpg"}, {"id": 30, "name": "Аэропорт, база и три моста", "era": "Инфраструктура", "image": "sketch-30.jpg"}, {"id": 31, "name": "Форпост · Диорама", "era": "Инфраструктура", "image": "sketch-31.jpg"}]</script>
 <script id="asset-reference-js">
 (() => {
   const data = document.getElementById('asset-reference-data');
@@ -25123,13 +26312,13 @@ if (DUEL.gpu) {
   dialog.setAttribute('aria-labelledby', 'asset-sheets-title');
   dialog.innerHTML = `
     <header class="as-header">
-      <h2 id="asset-sheets-title">Эскизы войск</h2>
+      <h2 id="asset-sheets-title">Эскизы</h2>
       <button id="asset-sheets-close" type="button" aria-label="Закрыть эскизы">×</button>
     </header>
     <div id="asset-sheets-content" hidden>
       <div class="as-controls">
-        <label>Эпоха<select id="asset-sheets-era"></select></label>
-        <label>Страна<select id="asset-sheets-country"></select></label>
+        <label>Раздел<select id="asset-sheets-era"></select></label>
+        <label><span id="asset-sheets-choice-label">Страна</span><select id="asset-sheets-country"></select></label>
         <button id="asset-sheets-zoom" type="button" aria-pressed="false">Увеличить</button>
       </div>
       <figure>
@@ -25161,7 +26350,11 @@ if (DUEL.gpu) {
   button.type = 'button';
   button.id = 'home-asset-sheets';
   button.className = 'harbor-trial';
-  button.innerHTML = '<span>Эскизы войск</span><small>12 стран · 2 эпохи</small>';
+  const infrastructureEra = 'Инфраструктура';
+  const includesInfrastructure = data.textContent.includes('"era":"Инфраструктура"');
+  button.innerHTML = includesInfrastructure ?
+    '<span>Эскизы</span><small>Войска · постройки · дороги</small>' :
+    '<span>Эскизы войск</span><small>12 стран · 2 эпохи</small>';
   menu.append(button);
 
   const industrialEra = 'Индустриальная эпоха';
@@ -25224,14 +26417,14 @@ if (DUEL.gpu) {
     active = sheet;
     remembered.set(activeEra, sheet.id);
     country.value = sheet.id;
-    const label = sheet.name + ' · ' + sheet.era;
+    const label = sheet.era === infrastructureEra ? sheet.name : sheet.name + ' · ' + sheet.era;
     const list = eras.get(activeEra);
     const index = list.indexOf(sheet);
     control('caption').textContent = label;
     control('count').textContent = (index + 1) + ' из ' + list.length;
     previous.disabled = index <= 0;
     next.disabled = index >= list.length - 1;
-    image.alt = 'Эскизы войск. ' + label;
+    image.alt = 'Эскизы. ' + label;
     error.hidden = true;
     if (image.getAttribute('src') !== sheet.image) image.src = sheet.image;
     viewport.scrollTo(0, 0);
@@ -25240,6 +26433,7 @@ if (DUEL.gpu) {
   function showEra(value, preferred) {
     activeEra = eras.has(value) ? value : eras.keys().next().value;
     era.value = activeEra;
+    control('choice-label').textContent = activeEra === infrastructureEra ? 'Лист' : 'Страна';
     const list = eras.get(activeEra);
     country.replaceChildren(...list.map(sheet => new Option(sheet.name, sheet.id)));
     showSheet(list.find(sheet => sheet.family === preferred) ||
@@ -25333,6 +26527,5 @@ if (DUEL.gpu) {
   dialog.addEventListener('keydown', event => { event.stopPropagation(); });
   dialog.addEventListener('keyup', event => { event.stopPropagation(); });
 })();
-
 </script>
 </body></html>
